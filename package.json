@@ -2,15 +2,15 @@
   "name": "e2sm",
   "version": "0.1.0",
   "bin": {
-    "e2sm": "src/index.ts"
+    "e2sm": "dist/index.mjs"
   },
   "files": [
-    "src/index.ts",
-    "src/lib.ts"
+    "dist"
   ],
   "type": "module",
-  "module": "src/index.ts",
   "scripts": {
+    "build": "tsdown",
+    "prepublishOnly": "bun run build",
     "prepare": "lefthook install",
     "preinstall": "npx only-allow bun",
     "fmt": "oxfmt",
@@ -20,17 +20,16 @@
     "check": "oxfmt && oxlint --type-aware",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@clack/prompts": "^0.11.0",
-    "gunshi": "0.27.5"
-  },
   "devDependencies": {
+    "@clack/prompts": "^0.11.0",
     "@gunshi/docs": "0.27.5",
     "@types/bun": "latest",
+    "gunshi": "0.27.5",
     "lefthook": "^2.0.15",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
-    "oxlint-tsgolint": "^0.11.1"
+    "oxlint-tsgolint": "^0.11.1",
+    "tsdown": "^0.20.0-beta.4"
   },
   "peerDependencies": {
     "typescript": "^5"

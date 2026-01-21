@@ -1,11 +1,35 @@
-#!/usr/bin/env bun
 import * as p from "@clack/prompts";
 import { cli, define } from "gunshi";
+import { spawn } from "node:child_process";
+import { access, readFile } from "node:fs/promises";
 import pkg from "../package.json";
 import { parseEnvContent, validateUnknownFlags } from "./lib";
 
 function isCancel(value: unknown): value is symbol {
   return p.isCancel(value);
+}
+
+function exec(
+  command: string,
+  args: string[],
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    const proc = spawn(command, args, {
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", (data: Buffer) => {
+      stdout += data.toString();
+    });
+    proc.stderr.on("data", (data: Buffer) => {
+      stderr += data.toString();
+    });
+    proc.on("close", (code) => {
+      resolve({ exitCode: code ?? 1, stdout, stderr });
+    });
+  });
 }
 
 const command = define({
@@ -76,15 +100,16 @@ const command = define({
     }
 
     // 2. Read and parse env file
-    const file = Bun.file(envFilePath);
-    const exists = await file.exists();
+    const exists = await access(envFilePath)
+      .then(() => true)
+      .catch(() => false);
 
     if (!exists) {
       p.cancel(`File not found: ${envFilePath}`);
       process.exit(1);
     }
 
-    const content = await file.text();
+    const content = await readFile(envFilePath, "utf-8");
     const envData = parseEnvContent(content);
 
     if (Object.keys(envData).length === 0) {
@@ -94,11 +119,10 @@ const command = define({
 
     const jsonString = JSON.stringify(envData);
 
-    // 3. Dry-run mode: preview with jq
+    // 3. Dry-run mode: preview JSON
     if (isDryRun) {
       p.log.info("Dry-run mode: Previewing JSON output");
-      const jqResult = await Bun.$`echo ${jsonString} | jq -C .`.text();
-      console.log(jqResult);
+      console.log(JSON.stringify(envData, null, 2));
       p.outro("Dry-run complete");
       return;
     }
@@ -131,29 +155,51 @@ const command = define({
     const regionArgs = region ? ["--region", region] : [];
 
     // First, try to check if the secret already exists
-    const describeResult =
-      await Bun.$`aws secretsmanager describe-secret --secret-id ${secretName} ${profileArgs} ${regionArgs} 2>/dev/null`.nothrow();
+    const describeResult = await exec("aws", [
+      "secretsmanager",
+      "describe-secret",
+      "--secret-id",
+      secretName,
+      ...profileArgs,
+      ...regionArgs,
+    ]);
 
     if (describeResult.exitCode === 0) {
       // Secret exists, update it
-      const updateResult =
-        await Bun.$`aws secretsmanager put-secret-value --secret-id ${secretName} --secret-string ${jsonString} ${profileArgs} ${regionArgs}`.nothrow();
+      const updateResult = await exec("aws", [
+        "secretsmanager",
+        "put-secret-value",
+        "--secret-id",
+        secretName,
+        "--secret-string",
+        jsonString,
+        ...profileArgs,
+        ...regionArgs,
+      ]);
 
       if (updateResult.exitCode !== 0) {
         spinner.stop("Failed to update secret");
-        p.cancel(`Error: ${updateResult.stderr.toString()}`);
+        p.cancel(`Error: ${updateResult.stderr}`);
         process.exit(1);
       }
 
       spinner.stop("Secret updated successfully");
     } else {
       // Secret doesn't exist, create it
-      const createResult =
-        await Bun.$`aws secretsmanager create-secret --name ${secretName} --secret-string ${jsonString} ${profileArgs} ${regionArgs}`.nothrow();
+      const createResult = await exec("aws", [
+        "secretsmanager",
+        "create-secret",
+        "--name",
+        secretName,
+        "--secret-string",
+        jsonString,
+        ...profileArgs,
+        ...regionArgs,
+      ]);
 
       if (createResult.exitCode !== 0) {
         spinner.stop("Failed to create secret");
-        p.cancel(`Error: ${createResult.stderr.toString()}`);
+        p.cancel(`Error: ${createResult.stderr}`);
         process.exit(1);
       }
 
