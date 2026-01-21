@@ -64,12 +64,20 @@ function parseEnvContent(content: string): Record<string, string> {
     const key = trimmed.slice(0, equalIndex).trim();
     let value = trimmed.slice(equalIndex + 1).trim();
 
-    // Remove surrounding quotes if present
-    if (
+    // Check if value is quoted
+    const isQuoted =
       (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
+      (value.startsWith("'") && value.endsWith("'"));
+
+    // Remove surrounding quotes if present
+    if (isQuoted) {
       value = value.slice(1, -1);
+    } else {
+      // Remove inline comment for unquoted values
+      const commentIndex = value.indexOf("#");
+      if (commentIndex !== -1) {
+        value = value.slice(0, commentIndex).trim();
+      }
     }
 
     if (key) {
