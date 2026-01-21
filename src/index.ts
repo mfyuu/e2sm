@@ -4,7 +4,12 @@ import { spawn } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 import { inspect } from "node:util";
 import pkg from "../package.json";
-import { parseEnvContent, validateUnknownFlags } from "./lib";
+import {
+  isTemplateMode,
+  parseEnvContent,
+  validateNameTemplateConflict,
+  validateUnknownFlags,
+} from "./lib";
 
 function isCancel(value: unknown): value is symbol {
   return p.isCancel(value);
@@ -63,12 +68,34 @@ const command = define({
       short: "r",
       description: "AWS region to use (e.g., ap-northeast-1)",
     },
+    template: {
+      type: "boolean",
+      short: "t",
+      description: "Use template mode: generate secret name as $application/$stage",
+    },
+    application: {
+      type: "string",
+      short: "a",
+      description: "Application name for template mode (implies --template)",
+    },
+    stage: {
+      type: "string",
+      short: "s",
+      description: "Stage name for template mode (implies --template)",
+    },
   },
   run: async (ctx) => {
     // Validate unknown flags first
     const unknownFlagError = validateUnknownFlags(ctx.tokens, ctx.args);
     if (unknownFlagError) {
       console.error(unknownFlagError);
+      process.exit(1);
+    }
+
+    // Validate flag conflicts
+    const conflictError = validateNameTemplateConflict(ctx.values);
+    if (conflictError) {
+      console.error(conflictError);
       process.exit(1);
     }
 
@@ -128,12 +155,58 @@ const command = define({
       return;
     }
 
-    // 4. Get secret name (from flag or interactively)
+    // 4. Get secret name
     let secretName: string;
+
+    const templateFlag = ctx.values.template;
+    const applicationFlag = ctx.values.application;
+    const stageFlag = ctx.values.stage;
+    const useTemplateMode = isTemplateMode({
+      template: templateFlag,
+      application: applicationFlag,
+      stage: stageFlag,
+    });
 
     if (nameFlag) {
       secretName = nameFlag;
+    } else if (useTemplateMode) {
+      // Template mode
+      let application: string;
+      let stage: string;
+
+      if (applicationFlag) {
+        application = applicationFlag;
+      } else {
+        const result = await p.text({
+          message: "Enter the application name:",
+          placeholder: "my-app",
+          defaultValue: "my-app",
+        });
+        if (isCancel(result)) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+        application = result;
+      }
+
+      if (stageFlag) {
+        stage = stageFlag;
+      } else {
+        const result = await p.text({
+          message: "Enter the stage name:",
+          placeholder: "dev",
+          defaultValue: "dev",
+        });
+        if (isCancel(result)) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+        stage = result;
+      }
+
+      secretName = `${application}/${stage}`;
     } else {
+      // Default mode
       const result = await p.text({
         message: "Enter the secret name for AWS Secrets Manager:",
         placeholder: "my-app/default",

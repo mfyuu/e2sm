@@ -46,6 +46,36 @@ export function validateUnknownFlags(
   return null;
 }
 
+/**
+ * Determines if template mode is active.
+ */
+export function isTemplateMode(flags: {
+  template?: boolean;
+  application?: string;
+  stage?: string;
+}): boolean {
+  return Boolean(flags.template || flags.application || flags.stage);
+}
+
+/**
+ * Validates that --name flag is not used with template mode flags.
+ */
+export function validateNameTemplateConflict(flags: {
+  name?: string;
+  template?: boolean;
+  application?: string;
+  stage?: string;
+}): string | null {
+  if (flags.name && isTemplateMode(flags)) {
+    const conflicting: string[] = [];
+    if (flags.template) conflicting.push("--template");
+    if (flags.application) conflicting.push("--application");
+    if (flags.stage) conflicting.push("--stage");
+    return `Cannot use --name with ${conflicting.join(", ")}`;
+  }
+  return null;
+}
+
 export function parseEnvContent(content: string): Record<string, string> {
   const result: Record<string, string> = {};
 

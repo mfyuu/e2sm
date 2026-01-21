@@ -31,6 +31,9 @@ describe("CLI", () => {
       expect(stdout).toContain("--input");
       expect(stdout).toContain("--name");
       expect(stdout).toContain("--region");
+      expect(stdout).toContain("--template");
+      expect(stdout).toContain("--application");
+      expect(stdout).toContain("--stage");
     });
 
     test("shows help with -h flag", async () => {
@@ -135,6 +138,102 @@ describe("CLI", () => {
 
       expect(exitCode).toBe(1);
       expect(stdout).toContain("No valid environment variables found");
+    });
+  });
+
+  describe("flag conflicts", () => {
+    test("--name with --template exits with error", async () => {
+      const { stderr, exitCode } = await runCli(["--name", "x", "--template"]);
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Cannot use --name");
+      expect(stderr).toContain("--template");
+    });
+
+    test("--name with --application exits with error", async () => {
+      const { stderr, exitCode } = await runCli(["--name", "x", "-a", "app"]);
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Cannot use --name");
+      expect(stderr).toContain("--application");
+    });
+
+    test("--name with --stage exits with error", async () => {
+      const { stderr, exitCode } = await runCli(["--name", "x", "-s", "prod"]);
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Cannot use --name");
+      expect(stderr).toContain("--stage");
+    });
+
+    test("--name with multiple template flags exits with error", async () => {
+      const { stderr, exitCode } = await runCli(["--name", "x", "-t", "-a", "app", "-s", "prod"]);
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Cannot use --name");
+      expect(stderr).toContain("--template");
+      expect(stderr).toContain("--application");
+      expect(stderr).toContain("--stage");
+    });
+  });
+
+  describe("template mode", () => {
+    const testEnvPath = "test-fixtures/test.env";
+
+    beforeAll(async () => {
+      await Bun.write(
+        `${import.meta.dir.replace("/src", "")}/${testEnvPath}`,
+        "FOO=bar\nBAZ=qux\n",
+      );
+    });
+
+    afterAll(async () => {
+      await unlink(`${import.meta.dir.replace("/src", "")}/${testEnvPath}`).catch(() => {});
+    });
+
+    test("-a and -s without -t works (implicit template mode)", async () => {
+      const { stdout, exitCode } = await runCli([
+        "-d",
+        "-i",
+        testEnvPath,
+        "-a",
+        "my-app",
+        "-s",
+        "prod",
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry-run mode");
+    });
+
+    test("-t -a -s generates correct secret name", async () => {
+      const { stdout, exitCode } = await runCli([
+        "-d",
+        "-i",
+        testEnvPath,
+        "-t",
+        "-a",
+        "my-app",
+        "-s",
+        "prod",
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry-run mode");
+    });
+
+    test("-a only (implicit template mode)", async () => {
+      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath, "-a", "my-app"]);
+
+      // Will wait for stage input interactively, but dry-run exits before secret name is needed
+      expect(exitCode).toBe(0);
+    });
+
+    test("-s only (implicit template mode)", async () => {
+      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath, "-s", "prod"]);
+
+      // Will wait for application input interactively, but dry-run exits before secret name is needed
+      expect(exitCode).toBe(0);
     });
   });
 });

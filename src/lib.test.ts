@@ -1,6 +1,12 @@
 import type { ArgSchema, ArgToken } from "gunshi";
 import { describe, expect, test } from "bun:test";
-import { parseEnvContent, toKebabCase, validateUnknownFlags } from "./lib";
+import {
+  isTemplateMode,
+  parseEnvContent,
+  toKebabCase,
+  validateNameTemplateConflict,
+  validateUnknownFlags,
+} from "./lib";
 
 describe("toKebabCase", () => {
   test("converts camelCase to kebab-case", () => {
@@ -171,5 +177,72 @@ describe("validateUnknownFlags", () => {
   test("returns first unknown option when multiple unknown options exist", () => {
     const tokens = [createToken("unknown1"), createToken("unknown2")];
     expect(validateUnknownFlags(tokens, baseArgs)).toBe("Unknown option: --unknown1");
+  });
+});
+
+describe("isTemplateMode", () => {
+  test("returns false when no template flags", () => {
+    expect(isTemplateMode({})).toBe(false);
+  });
+
+  test("returns true when --template", () => {
+    expect(isTemplateMode({ template: true })).toBe(true);
+  });
+
+  test("returns false when --template is false", () => {
+    expect(isTemplateMode({ template: false })).toBe(false);
+  });
+
+  test("returns true when --application", () => {
+    expect(isTemplateMode({ application: "app" })).toBe(true);
+  });
+
+  test("returns true when --stage", () => {
+    expect(isTemplateMode({ stage: "prod" })).toBe(true);
+  });
+
+  test("returns true when all flags are set", () => {
+    expect(isTemplateMode({ template: true, application: "app", stage: "prod" })).toBe(true);
+  });
+});
+
+describe("validateNameTemplateConflict", () => {
+  test("returns null when no conflict", () => {
+    expect(validateNameTemplateConflict({ name: "secret" })).toBeNull();
+    expect(validateNameTemplateConflict({ template: true })).toBeNull();
+  });
+
+  test("returns null when only template mode flags", () => {
+    expect(validateNameTemplateConflict({ application: "app", stage: "prod" })).toBeNull();
+  });
+
+  test("returns error when --name with --template", () => {
+    const result = validateNameTemplateConflict({ name: "s", template: true });
+    expect(result).toContain("--template");
+    expect(result).toContain("Cannot use --name");
+  });
+
+  test("returns error when --name with --application", () => {
+    const result = validateNameTemplateConflict({ name: "s", application: "a" });
+    expect(result).toContain("--application");
+    expect(result).toContain("Cannot use --name");
+  });
+
+  test("returns error when --name with --stage", () => {
+    const result = validateNameTemplateConflict({ name: "s", stage: "p" });
+    expect(result).toContain("--stage");
+    expect(result).toContain("Cannot use --name");
+  });
+
+  test("returns error with all conflicting flags listed", () => {
+    const result = validateNameTemplateConflict({
+      name: "s",
+      template: true,
+      application: "a",
+      stage: "p",
+    });
+    expect(result).toContain("--template");
+    expect(result).toContain("--application");
+    expect(result).toContain("--stage");
   });
 });
