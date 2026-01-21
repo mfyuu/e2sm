@@ -1,5 +1,15 @@
 # e2sm
 
+## 0.3.0
+
+### Minor Changes
+
+- [`10d2e1c`](https://github.com/mfyuu/e2sm/commit/10d2e1cf33a3e183805292336b521ea4ee0617fd) Thanks [@mfyuu](https://github.com/mfyuu)! - add --template (-t), --application (-a), and --stage (-s) flags for generating secret names
+  - enable template mode to generate secret name as `$application/$stage` format
+  - implicit template mode: using -a or -s alone activates template mode without -t
+  - add flag conflict validation: --name cannot be used with template mode flags
+  - interactive prompts for missing application/stage values with sensible defaults
+
 ## 0.2.1
 
 ### Patch Changes
