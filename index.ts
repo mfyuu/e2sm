@@ -1,6 +1,7 @@
 import type { ArgSchema, ArgToken } from "gunshi";
 import * as p from "@clack/prompts";
 import { cli, define } from "gunshi";
+import pkg from "./package.json";
 
 function toKebabCase(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
@@ -122,7 +123,7 @@ const command = define({
     const inputFlag = ctx.values.input;
     const nameFlag = ctx.values.name;
 
-    p.intro("e2sm - env to AWS Secrets Manager");
+    p.intro(`e2sm v${pkg.version} - env to AWS Secrets Manager`);
 
     // 1. Get env file path (from flag or interactively)
     let envFilePath: string;
@@ -242,4 +243,6 @@ const command = define({
   },
 });
 
-await cli(process.argv.slice(2), command);
+await cli(process.argv.slice(2), command, {
+  version: pkg.version,
+});
