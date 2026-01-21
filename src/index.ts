@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import * as p from "@clack/prompts";
 import { cli, define } from "gunshi";
 import pkg from "../package.json";
