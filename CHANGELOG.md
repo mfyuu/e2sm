@@ -1,5 +1,11 @@
 # e2sm
 
+## 0.2.1
+
+### Patch Changes
+
+- [`8279784`](https://github.com/mfyuu/e2sm/commit/82797845814fe7d610fe9bfded0a6a04c54e9e3e) Thanks [@mfyuu](https://github.com/mfyuu)! - add colored output for --dry-run mode using node:util inspect.
+
 ## 0.2.0
 
 ### Minor Changes
