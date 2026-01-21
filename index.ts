@@ -107,6 +107,16 @@ const command = define({
       short: "p",
       description: "AWS profile to use",
     },
+    input: {
+      type: "string",
+      short: "i",
+      description: "Path to the .env file (skip interactive prompt)",
+    },
+    name: {
+      type: "string",
+      short: "n",
+      description: "Secret name for AWS Secrets Manager (skip interactive prompt)",
+    },
   },
   run: async (ctx) => {
     // Validate unknown flags first
@@ -114,24 +124,34 @@ const command = define({
 
     const isDryRun = ctx.values.dryRun;
     const profile = ctx.values.profile;
+    const inputFlag = ctx.values.input;
+    const nameFlag = ctx.values.name;
 
     p.intro("e2sm - env to AWS Secrets Manager");
 
-    // 1. Get env file path interactively
-    const envFilePath = await p.text({
-      message: "Enter the path to your .env file:",
-      placeholder: ".env",
-      validate: (value) => {
-        if (!value) {
-          return "File path is required";
-        }
-        return undefined;
-      },
-    });
+    // 1. Get env file path (from flag or interactively)
+    let envFilePath: string;
 
-    if (isCancel(envFilePath)) {
-      p.cancel("Operation cancelled");
-      process.exit(0);
+    if (inputFlag) {
+      envFilePath = inputFlag;
+    } else {
+      const result = await p.text({
+        message: "Enter the path to your .env file:",
+        placeholder: ".env",
+        validate: (value) => {
+          if (!value) {
+            return "File path is required";
+          }
+          return undefined;
+        },
+      });
+
+      if (isCancel(result)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+
+      envFilePath = result;
     }
 
     // 2. Read and parse env file
@@ -162,21 +182,29 @@ const command = define({
       return;
     }
 
-    // 4. Get secret name interactively
-    const secretName = await p.text({
-      message: "Enter the secret name for AWS Secrets Manager:",
-      placeholder: "my-app/production",
-      validate: (value) => {
-        if (!value) {
-          return "Secret name is required";
-        }
-        return undefined;
-      },
-    });
+    // 4. Get secret name (from flag or interactively)
+    let secretName: string;
 
-    if (isCancel(secretName)) {
-      p.cancel("Operation cancelled");
-      process.exit(0);
+    if (nameFlag) {
+      secretName = nameFlag;
+    } else {
+      const result = await p.text({
+        message: "Enter the secret name for AWS Secrets Manager:",
+        placeholder: "my-app/production",
+        validate: (value) => {
+          if (!value) {
+            return "Secret name is required";
+          }
+          return undefined;
+        },
+      });
+
+      if (isCancel(result)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+
+      secretName = result;
     }
 
     // 5. Upload to AWS Secrets Manager
