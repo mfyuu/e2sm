@@ -1,16 +1,30 @@
 {
   "name": "e2sm",
-  "module": "index.ts",
   "type": "module",
-  "devDependencies": {
-    "@gunshi/docs": "0.27.5",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+  "module": "index.ts",
+  "scripts": {
+    "prepare": "lefthook install",
+    "preinstall": "npx only-allow bun",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint-types": "oxlint --type-aware",
+    "check": "oxfmt && oxlint --type-aware",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",
     "gunshi": "0.27.5"
+  },
+  "devDependencies": {
+    "@gunshi/docs": "0.27.5",
+    "@types/bun": "latest",
+    "lefthook": "^2.0.15",
+    "oxfmt": "^0.26.0",
+    "oxlint": "^1.41.0",
+    "oxlint-tsgolint": "^0.11.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

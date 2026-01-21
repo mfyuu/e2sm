@@ -1,15 +1,12 @@
-import { cli, define } from "gunshi";
 import type { ArgSchema, ArgToken } from "gunshi";
 import * as p from "@clack/prompts";
+import { cli, define } from "gunshi";
 
 function toKebabCase(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
-function validateUnknownFlags(
-  tokens: ArgToken[],
-  args: Record<string, ArgSchema>
-): void {
+function validateUnknownFlags(tokens: ArgToken[], args: Record<string, ArgSchema>): void {
   // Build set of known option names
   const knownOptions = new Set<string>();
 
@@ -33,9 +30,7 @@ function validateUnknownFlags(
   for (const token of tokens) {
     if (token.kind === "option" && token.name) {
       // Handle --no- prefix for negatable options
-      const name = token.name.startsWith("no-")
-        ? token.name.slice(3)
-        : token.name;
+      const name = token.name.startsWith("no-") ? token.name.slice(3) : token.name;
 
       if (!knownOptions.has(name)) {
         console.error(`Unknown option: --${token.name}`);
