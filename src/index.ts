@@ -2,6 +2,7 @@ import * as p from "@clack/prompts";
 import { cli, define } from "gunshi";
 import { spawn } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
+import { inspect } from "node:util";
 import pkg from "../package.json";
 import { parseEnvContent, validateUnknownFlags } from "./lib";
 
@@ -122,7 +123,7 @@ const command = define({
     // 3. Dry-run mode: preview JSON
     if (isDryRun) {
       p.log.info("Dry-run mode: Previewing JSON output");
-      console.log(JSON.stringify(envData, null, 2));
+      console.log(inspect(envData, { colors: true, depth: null }));
       p.outro("Dry-run complete");
       return;
     }
