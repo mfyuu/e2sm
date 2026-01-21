@@ -30,6 +30,7 @@ describe("CLI", () => {
       expect(stdout).toContain("--profile");
       expect(stdout).toContain("--input");
       expect(stdout).toContain("--name");
+      expect(stdout).toContain("--region");
     });
 
     test("shows help with -h flag", async () => {

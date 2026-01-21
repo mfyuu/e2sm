@@ -32,6 +32,11 @@ const command = define({
       short: "n",
       description: "Secret name for AWS Secrets Manager (skip interactive prompt)",
     },
+    region: {
+      type: "string",
+      short: "r",
+      description: "AWS region to use (e.g., ap-northeast-1)",
+    },
   },
   run: async (ctx) => {
     // Validate unknown flags first
@@ -45,6 +50,7 @@ const command = define({
     const profile = ctx.values.profile;
     const inputFlag = ctx.values.input;
     const nameFlag = ctx.values.name;
+    const region = ctx.values.region;
 
     p.intro(`e2sm v${pkg.version} - env to AWS Secrets Manager`);
 
@@ -56,13 +62,8 @@ const command = define({
     } else {
       const result = await p.text({
         message: "Enter the path to your .env file:",
-        placeholder: ".env",
-        validate: (value) => {
-          if (!value) {
-            return "File path is required";
-          }
-          return undefined;
-        },
+        placeholder: ".env.local",
+        defaultValue: ".env.local",
       });
 
       if (isCancel(result)) {
@@ -109,13 +110,8 @@ const command = define({
     } else {
       const result = await p.text({
         message: "Enter the secret name for AWS Secrets Manager:",
-        placeholder: "my-app/production",
-        validate: (value) => {
-          if (!value) {
-            return "Secret name is required";
-          }
-          return undefined;
-        },
+        placeholder: "my-app/default",
+        defaultValue: "my-app/default",
       });
 
       if (isCancel(result)) {
@@ -131,15 +127,16 @@ const command = define({
     spinner.start("Uploading to AWS Secrets Manager...");
 
     const profileArgs = profile ? ["--profile", profile] : [];
+    const regionArgs = region ? ["--region", region] : [];
 
     // First, try to check if the secret already exists
     const describeResult =
-      await Bun.$`aws secretsmanager describe-secret --secret-id ${secretName} ${profileArgs} 2>/dev/null`.nothrow();
+      await Bun.$`aws secretsmanager describe-secret --secret-id ${secretName} ${profileArgs} ${regionArgs} 2>/dev/null`.nothrow();
 
     if (describeResult.exitCode === 0) {
       // Secret exists, update it
       const updateResult =
-        await Bun.$`aws secretsmanager put-secret-value --secret-id ${secretName} --secret-string ${jsonString} ${profileArgs}`.nothrow();
+        await Bun.$`aws secretsmanager put-secret-value --secret-id ${secretName} --secret-string ${jsonString} ${profileArgs} ${regionArgs}`.nothrow();
 
       if (updateResult.exitCode !== 0) {
         spinner.stop("Failed to update secret");
@@ -151,7 +148,7 @@ const command = define({
     } else {
       // Secret doesn't exist, create it
       const createResult =
-        await Bun.$`aws secretsmanager create-secret --name ${secretName} --secret-string ${jsonString} ${profileArgs}`.nothrow();
+        await Bun.$`aws secretsmanager create-secret --name ${secretName} --secret-string ${jsonString} ${profileArgs} ${regionArgs}`.nothrow();
 
       if (createResult.exitCode !== 0) {
         spinner.stop("Failed to create secret");
