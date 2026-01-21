@@ -148,7 +148,7 @@ const command = define({
     // 3. Dry-run mode: preview with jq
     if (isDryRun) {
       p.log.info("Dry-run mode: Previewing JSON output");
-      const jqResult = await Bun.$`echo ${jsonString} | jq .`.text();
+      const jqResult = await Bun.$`echo ${jsonString} | jq -C .`.text();
       console.log(jqResult);
       p.outro("Dry-run complete");
       return;
