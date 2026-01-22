@@ -10,6 +10,16 @@ npx e2sm --dry-run
 npx e2sm --help
 ```
 
+### Get Secrets
+
+Retrieve secrets from AWS Secrets Manager.
+
+```bash
+npx e2sm get
+npx e2sm get -n my-secret-name
+npx e2sm get -p my-profile -r ap-northeast-1
+```
+
 ## Configuration
 
 You can create a `.e2smrc.json` file to set default options.
