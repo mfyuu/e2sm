@@ -1,5 +1,14 @@
 # e2sm
 
+## 0.4.2
+
+### Patch Changes
+
+- [`574f30b`](https://github.com/mfyuu/e2sm/commit/574f30b7e3741cfd9af5f899fe61311c4ffb7860) Thanks [@mfyuu](https://github.com/mfyuu)! - fix(config): replace Bun.file() with node:fs/promises for Node.js compatibility
+  - replace Bun.file() with readFile from node:fs/promises in loadConfig()
+  - ensure configuration loading works in Node.js environment when using bunx
+  - improve error handling comment to clarify file not found and parse errors
+
 ## 0.4.1
 
 ### Patch Changes
