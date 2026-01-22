@@ -1,4 +1,6 @@
 import type { ArgSchema, ArgToken } from "gunshi";
+import { cyan, dim, gray, green } from "kleur/colors";
+import { spawn } from "node:child_process";
 
 export function toKebabCase(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
@@ -159,4 +161,69 @@ export function mergeWithConfig(cliValues: Partial<E2smConfig>, config: E2smConf
     ...config,
     ...Object.fromEntries(Object.entries(cliValues).filter(([, v]) => v !== undefined)),
   };
+}
+
+export function exec(
+  command: string,
+  args: string[],
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    const proc = spawn(command, args, {
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", (data: Buffer) => {
+      stdout += data.toString();
+    });
+    proc.stderr.on("data", (data: Buffer) => {
+      stderr += data.toString();
+    });
+    proc.on("close", (code) => {
+      resolve({ exitCode: code ?? 1, stdout, stderr });
+    });
+  });
+}
+
+export function formatJson(obj: unknown, indent = 0): string {
+  const spaces = "  ".repeat(indent);
+
+  if (obj === null) {
+    return gray("null");
+  }
+
+  if (typeof obj === "string") {
+    return green(`"${obj}"`);
+  }
+
+  if (typeof obj === "number" || typeof obj === "boolean" || typeof obj === "bigint") {
+    return String(obj);
+  }
+
+  if (typeof obj === "undefined") {
+    return gray("undefined");
+  }
+
+  if (typeof obj === "symbol") {
+    return gray(obj.toString());
+  }
+
+  if (typeof obj === "function") {
+    return gray("[Function]");
+  }
+
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return dim("[]");
+    const items = obj.map((item) => `${spaces}  ${formatJson(item, indent + 1)}`);
+    return `${dim("[")}\n${items.join(`${dim(",")}\n`)}\n${spaces}${dim("]")}`;
+  }
+
+  // obj is now narrowed to object (non-null, non-array)
+  const entries = Object.entries(obj);
+  if (entries.length === 0) return dim("{}");
+  const items = entries.map(
+    ([key, value]) => `${spaces}  ${cyan(`"${key}"`)}${dim(":")} ${formatJson(value, indent + 1)}`,
+  );
+  return `${dim("{")}\n${items.join(`${dim(",")}\n`)}\n${spaces}${dim("}")}`;
 }

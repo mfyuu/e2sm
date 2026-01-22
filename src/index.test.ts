@@ -237,6 +237,43 @@ describe("CLI", () => {
     });
   });
 
+  describe("get subcommand", () => {
+    describe("--help", () => {
+      test("shows help message", async () => {
+        const { stdout, exitCode } = await runCli(["get", "--help"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+        expect(stdout).toContain("--profile");
+        expect(stdout).toContain("--region");
+        expect(stdout).toContain("--name");
+      });
+
+      test("shows help with -h flag", async () => {
+        const { stdout, exitCode } = await runCli(["get", "-h"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+      });
+    });
+
+    describe("unknown flags", () => {
+      test("exits with error for unknown flag", async () => {
+        const { stderr, exitCode } = await runCli(["get", "--unknown-flag"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --unknown-flag");
+      });
+
+      test("exits with error for unknown short flag", async () => {
+        const { stderr, exitCode } = await runCli(["get", "-x"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --x");
+      });
+    });
+  });
+
   describe("config file", () => {
     const testEnvPath = "test-fixtures/test.env";
     const configPath = ".e2smrc.json";

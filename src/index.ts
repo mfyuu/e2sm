@@ -1,10 +1,11 @@
 import * as p from "@clack/prompts";
 import { cli, define } from "gunshi";
-import { spawn } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
-import { inspect } from "node:util";
 import pkg from "../package.json";
+import { getCommand } from "./get";
 import {
+  exec,
+  formatJson,
   isTemplateMode,
   loadConfig,
   mergeWithConfig,
@@ -15,29 +16,6 @@ import {
 
 function isCancel(value: unknown): value is symbol {
   return p.isCancel(value);
-}
-
-function exec(
-  command: string,
-  args: string[],
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  return new Promise((resolve) => {
-    const proc = spawn(command, args, {
-      shell: false,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (data: Buffer) => {
-      stdout += data.toString();
-    });
-    proc.stderr.on("data", (data: Buffer) => {
-      stderr += data.toString();
-    });
-    proc.on("close", (code) => {
-      resolve({ exitCode: code ?? 1, stdout, stderr });
-    });
-  });
 }
 
 const command = define({
@@ -158,7 +136,7 @@ const command = define({
     // 3. Dry-run mode: preview JSON
     if (isDryRun) {
       p.log.info("Dry-run mode: Previewing JSON output");
-      console.log(inspect(envData, { colors: true, depth: null }));
+      console.log(formatJson(envData));
       p.outro("Dry-run complete");
       return;
     }
@@ -294,4 +272,8 @@ const command = define({
 
 await cli(process.argv.slice(2), command, {
   version: pkg.version,
+  fallbackToEntry: true,
+  subCommands: {
+    get: getCommand,
+  },
 });
