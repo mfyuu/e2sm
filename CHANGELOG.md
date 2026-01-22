@@ -1,5 +1,13 @@
 # e2sm
 
+## 0.4.1
+
+### Patch Changes
+
+- [`058f529`](https://github.com/mfyuu/e2sm/commit/058f529198e841f8be51676cccbd56ad2289e05a) Thanks [@mfyuu](https://github.com/mfyuu)! - fix(ci): add build step to release script
+  - ensure dist includes loadConfig before publish
+  - fixes missing configuration file feature in v0.4.0
+
 ## 0.4.0
 
 ### Minor Changes
