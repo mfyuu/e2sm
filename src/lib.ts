@@ -118,3 +118,46 @@ export function parseEnvContent(content: string): Record<string, string> {
 
   return result;
 }
+
+export interface E2smConfig {
+  template?: boolean;
+  application?: string;
+  stage?: string;
+  profile?: string;
+  region?: string;
+  input?: string;
+}
+
+/**
+ * Loads config from .e2smrc.json (project or global).
+ * Returns empty object if no config found.
+ */
+export async function loadConfig(): Promise<E2smConfig> {
+  const { homedir } = await import("node:os");
+  const { join } = await import("node:path");
+
+  const candidates = [join(process.cwd(), ".e2smrc.json"), join(homedir(), ".e2smrc.json")];
+
+  for (const filePath of candidates) {
+    try {
+      const file = Bun.file(filePath);
+      if (await file.exists()) {
+        return await file.json();
+      }
+    } catch {
+      // ignore parse errors, continue to next
+    }
+  }
+
+  return {};
+}
+
+/**
+ * Merges CLI flags with config. CLI takes precedence.
+ */
+export function mergeWithConfig(cliValues: Partial<E2smConfig>, config: E2smConfig): E2smConfig {
+  return {
+    ...config,
+    ...Object.fromEntries(Object.entries(cliValues).filter(([, v]) => v !== undefined)),
+  };
+}

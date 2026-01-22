@@ -11,7 +11,8 @@
     "e2sm": "dist/index.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "schema.json"
   ],
   "type": "module",
   "publishConfig": {

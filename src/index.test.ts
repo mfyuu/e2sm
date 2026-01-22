@@ -223,17 +223,73 @@ describe("CLI", () => {
     });
 
     test("-a only (implicit template mode)", async () => {
-      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath, "-a", "my-app"]);
+      const { exitCode } = await runCli(["-d", "-i", testEnvPath, "-a", "my-app"]);
 
       // Will wait for stage input interactively, but dry-run exits before secret name is needed
       expect(exitCode).toBe(0);
     });
 
     test("-s only (implicit template mode)", async () => {
-      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath, "-s", "prod"]);
+      const { exitCode } = await runCli(["-d", "-i", testEnvPath, "-s", "prod"]);
 
       // Will wait for application input interactively, but dry-run exits before secret name is needed
       expect(exitCode).toBe(0);
+    });
+  });
+
+  describe("config file", () => {
+    const testEnvPath = "test-fixtures/test.env";
+    const configPath = ".e2smrc.json";
+    const projectRoot = import.meta.dir.replace("/src", "");
+
+    beforeAll(async () => {
+      await Bun.write(`${projectRoot}/${testEnvPath}`, "FOO=bar\nBAZ=qux\n");
+    });
+
+    afterAll(async () => {
+      await unlink(`${projectRoot}/${testEnvPath}`).catch(() => {});
+      await unlink(`${projectRoot}/${configPath}`).catch(() => {});
+    });
+
+    test("loads input flag from config", async () => {
+      await Bun.write(`${projectRoot}/${configPath}`, JSON.stringify({ input: testEnvPath }));
+      const { stdout, exitCode } = await runCli(["-d"]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry-run mode");
+      expect(stdout).toContain("FOO");
+    });
+
+    test("CLI flag overrides config", async () => {
+      await Bun.write(`${projectRoot}/${configPath}`, JSON.stringify({ input: "nonexistent.env" }));
+      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry-run mode");
+    });
+
+    test("loads template mode flags from config", async () => {
+      await Bun.write(
+        `${projectRoot}/${configPath}`,
+        JSON.stringify({
+          template: true,
+          application: "my-app",
+          stage: "prod",
+          input: testEnvPath,
+        }),
+      );
+      const { stdout, exitCode } = await runCli(["-d"]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry-run mode");
+    });
+
+    test("ignores invalid config file", async () => {
+      await Bun.write(`${projectRoot}/${configPath}`, "invalid json");
+      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("Dry-run mode");
     });
   });
 });

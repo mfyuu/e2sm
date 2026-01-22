@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "e2sm configuration",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "template": {
+      "type": "boolean",
+      "description": "Use template mode: generate secret name as $application/$stage"
+    },
+    "application": {
+      "type": "string",
+      "description": "Application name for template mode"
+    },
+    "stage": {
+      "type": "string",
+      "description": "Stage name for template mode"
+    },
+    "profile": {
+      "type": "string",
+      "description": "AWS profile to use"
+    },
+    "region": {
+      "type": "string",
+      "description": "AWS region to use"
+    },
+    "input": {
+      "type": "string",
+      "description": "Path to the .env file"
+    }
+  },
+  "additionalProperties": false
+}

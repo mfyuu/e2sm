@@ -6,6 +6,8 @@ import { inspect } from "node:util";
 import pkg from "../package.json";
 import {
   isTemplateMode,
+  loadConfig,
+  mergeWithConfig,
   parseEnvContent,
   validateNameTemplateConflict,
   validateUnknownFlags,
@@ -85,6 +87,9 @@ const command = define({
     },
   },
   run: async (ctx) => {
+    // Load config file
+    const config = await loadConfig();
+
     // Validate unknown flags first
     const unknownFlagError = validateUnknownFlags(ctx.tokens, ctx.args);
     if (unknownFlagError) {
@@ -99,11 +104,14 @@ const command = define({
       process.exit(1);
     }
 
-    const isDryRun = ctx.values.dryRun;
-    const profile = ctx.values.profile;
-    const inputFlag = ctx.values.input;
-    const nameFlag = ctx.values.name;
-    const region = ctx.values.region;
+    // Merge CLI flags with config (CLI takes precedence)
+    const merged = mergeWithConfig(ctx.values, config);
+
+    const isDryRun = ctx.values.dryRun; // dryRun is CLI-only
+    const profile = merged.profile;
+    const inputFlag = merged.input;
+    const nameFlag = ctx.values.name; // name is CLI-only
+    const region = merged.region;
 
     p.intro(`e2sm v${pkg.version} - env to AWS Secrets Manager`);
 
@@ -158,9 +166,9 @@ const command = define({
     // 4. Get secret name
     let secretName: string;
 
-    const templateFlag = ctx.values.template;
-    const applicationFlag = ctx.values.application;
-    const stageFlag = ctx.values.stage;
+    const templateFlag = merged.template;
+    const applicationFlag = merged.application;
+    const stageFlag = merged.stage;
     const useTemplateMode = isTemplateMode({
       template: templateFlag,
       application: applicationFlag,
