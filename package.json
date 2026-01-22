@@ -32,7 +32,7 @@
     "test": "bun test",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "changeset publish"
+    "release": "bun run build && changeset publish"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.2",
