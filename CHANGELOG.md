@@ -1,5 +1,18 @@
 # e2sm
 
+## 0.5.0
+
+### Minor Changes
+
+- [`024e95e`](https://github.com/mfyuu/e2sm/commit/024e95e1684405160aea3428d6c0fde94c47dc34) Thanks [@mfyuu](https://github.com/mfyuu)! - feat: add get subcommand and improve JSON formatting
+  - add get subcommand to retrieve secrets from AWS Secrets Manager
+  - implement interactive secret selection with profile/region support
+  - add kleur dependency for colored terminal output
+  - enhance formatJson function with dim styling for structural symbols
+  - refactor exec function to lib.ts for code reuse
+  - replace util.inspect with custom formatJson in dry-run mode
+  - add comprehensive tests for new get command and exec function
+
 ## 0.4.2
 
 ### Patch Changes
