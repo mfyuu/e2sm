@@ -1,5 +1,15 @@
 # e2sm
 
+## 0.4.0
+
+### Minor Changes
+
+- [`9af035a`](https://github.com/mfyuu/e2sm/commit/9af035ae265e8d2c87465a10f82b5a30fc4b5fc5) Thanks [@mfyuu](https://github.com/mfyuu)! - add `.e2smrc.json` configuration file support
+  - load config from project (`./.e2smrc.json`) or global (`~/.e2smrc.json`)
+  - CLI flags take precedence over config values
+  - configurable options: `template`, `application`, `stage`, `profile`, `region`, `input`
+  - include JSON Schema for editor autocompletion
+
 ## 0.3.0
 
 ### Minor Changes
