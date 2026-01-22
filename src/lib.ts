@@ -135,17 +135,16 @@ export interface E2smConfig {
 export async function loadConfig(): Promise<E2smConfig> {
   const { homedir } = await import("node:os");
   const { join } = await import("node:path");
+  const { readFile } = await import("node:fs/promises");
 
   const candidates = [join(process.cwd(), ".e2smrc.json"), join(homedir(), ".e2smrc.json")];
 
   for (const filePath of candidates) {
     try {
-      const file = Bun.file(filePath);
-      if (await file.exists()) {
-        return await file.json();
-      }
+      const content = await readFile(filePath, "utf-8");
+      return JSON.parse(content);
     } catch {
-      // ignore parse errors, continue to next
+      // ignore errors (file not found, parse errors), continue to next
     }
   }
 
