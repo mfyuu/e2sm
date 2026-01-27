@@ -13,4 +13,9 @@ export default defineConfig({
   loader: {
     ".jsonc": "text",
   },
+  inputOptions: {
+    resolve: {
+      mainFields: ["module", "main"],
+    },
+  },
 });
