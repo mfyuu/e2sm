@@ -30,6 +30,7 @@ describe("CLI", () => {
       expect(stdout).toContain("get");
       expect(stdout).toContain("pull");
       expect(stdout).toContain("set");
+      expect(stdout).toContain("delete");
       expect(stdout).not.toContain("undefined");
     });
 
@@ -51,6 +52,7 @@ describe("CLI", () => {
       expect(stderr).toContain("e2sm set");
       expect(stderr).toContain("e2sm get");
       expect(stderr).toContain("e2sm pull");
+      expect(stderr).toContain("e2sm delete");
     });
   });
 
@@ -85,6 +87,7 @@ describe("CLI", () => {
         expect(stdout).toContain("--template");
         expect(stdout).toContain("--application");
         expect(stdout).toContain("--stage");
+        expect(stdout).toContain("--force");
       });
 
       test("shows help with -h flag", async () => {
@@ -362,6 +365,91 @@ describe("CLI", () => {
 
         expect(exitCode).toBe(1);
         expect(stderr).toContain("Unknown option: --x");
+      });
+    });
+  });
+
+  describe("delete subcommand", () => {
+    describe("--help", () => {
+      test("shows help message", async () => {
+        const { stdout, exitCode } = await runCli(["delete", "--help"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+        expect(stdout).toContain("--profile");
+        expect(stdout).toContain("--region");
+        expect(stdout).toContain("--name");
+        expect(stdout).toContain("--recovery-days");
+        expect(stdout).toContain("--force");
+      });
+
+      test("shows help with -h flag", async () => {
+        const { stdout, exitCode } = await runCli(["delete", "-h"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+      });
+    });
+
+    describe("unknown flags", () => {
+      test("exits with error for unknown flag", async () => {
+        const { stderr, exitCode } = await runCli(["delete", "--unknown-flag"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --unknown-flag");
+      });
+
+      test("exits with error for unknown short flag", async () => {
+        const { stderr, exitCode } = await runCli(["delete", "-x"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --x");
+      });
+    });
+
+    describe("invalid recovery days", () => {
+      test("exits with error when recovery days is too low", async () => {
+        const { stdout, exitCode } = await runCli([
+          "delete",
+          "--name",
+          "test-secret",
+          "--recovery-days",
+          "5",
+          "--force",
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain("Invalid recovery days");
+        expect(stdout).toContain("Must be between 7 and 30");
+      });
+
+      test("exits with error when recovery days is too high", async () => {
+        const { stdout, exitCode } = await runCli([
+          "delete",
+          "--name",
+          "test-secret",
+          "--recovery-days",
+          "31",
+          "--force",
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain("Invalid recovery days");
+        expect(stdout).toContain("Must be between 7 and 30");
+      });
+
+      test("exits with error when recovery days is not a number", async () => {
+        const { stdout, exitCode } = await runCli([
+          "delete",
+          "--name",
+          "test-secret",
+          "--recovery-days",
+          "abc",
+          "--force",
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain("Invalid recovery days");
       });
     });
   });

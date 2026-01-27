@@ -75,4 +75,12 @@ describe("setCommand", () => {
       description: "Stage name for template mode (implies --template)",
     });
   });
+
+  test("defines force flag", () => {
+    expect(setCommand.args?.force).toEqual({
+      type: "boolean",
+      short: "f",
+      description: "Skip confirmation prompt when overwriting existing secret",
+    });
+  });
 });

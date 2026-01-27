@@ -62,6 +62,11 @@ export const setCommand = define({
       short: "s",
       description: "Stage name for template mode (implies --template)",
     },
+    force: {
+      type: "boolean",
+      short: "f",
+      description: "Skip confirmation prompt when overwriting existing secret",
+    },
   },
   run: async (ctx) => {
     // Load config file
@@ -89,6 +94,7 @@ export const setCommand = define({
     const inputFlag = merged.input;
     const nameFlag = ctx.values.name; // name is CLI-only
     const region = merged.region;
+    const forceFlag = ctx.values.force;
 
     p.intro(`e2sm set v${pkg.version} - env to AWS Secrets Manager`);
 
@@ -207,13 +213,10 @@ export const setCommand = define({
     }
 
     // 5. Upload to AWS Secrets Manager
-    const spinner = p.spinner();
-    spinner.start(`Uploading '${envFilePath}' to '${secretName}' in AWS Secrets Manager...`);
-
     const profileArgs = profile ? ["--profile", profile] : [];
     const regionArgs = region ? ["--region", region] : [];
 
-    // First, try to check if the secret already exists
+    // First, check if the secret already exists
     const describeResult = await exec("aws", [
       "secretsmanager",
       "describe-secret",
@@ -223,7 +226,25 @@ export const setCommand = define({
       ...regionArgs,
     ]);
 
-    if (describeResult.exitCode === 0) {
+    const secretExists = describeResult.exitCode === 0;
+
+    // Confirm overwrite if secret exists
+    if (secretExists && !forceFlag) {
+      const confirmed = await p.confirm({
+        message: `Secret '${secretName}' already exists. Overwrite?`,
+        initialValue: false,
+      });
+
+      if (isCancel(confirmed) || !confirmed) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+    }
+
+    const spinner = p.spinner();
+    spinner.start(`Uploading '${envFilePath}' to '${secretName}' in AWS Secrets Manager...`);
+
+    if (secretExists) {
       // Secret exists, update it
       const updateResult = await exec("aws", [
         "secretsmanager",
