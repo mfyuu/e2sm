@@ -13,7 +13,7 @@ const command = define({
     console.error("Error: Please specify a subcommand (init, set, get, pull, or delete)");
     console.error("");
     console.error("Usage:");
-    console.error("  e2sm init   - Initialize .e2smrc.json configuration file");
+    console.error("  e2sm init   - Initialize .e2smrc.jsonc configuration file");
     console.error("  e2sm set    - Upload .env file to AWS Secrets Manager");
     console.error("  e2sm get    - Display secret from AWS Secrets Manager");
     console.error("  e2sm pull   - Pull secret and generate .env file");
