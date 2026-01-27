@@ -2,6 +2,7 @@ import { cli, define } from "gunshi";
 import pkg from "../package.json";
 import { deleteCommand } from "./commands/delete";
 import { getCommand } from "./commands/get";
+import { initCommand } from "./commands/init";
 import { pullCommand } from "./commands/pull";
 import { setCommand } from "./commands/set";
 
@@ -9,9 +10,10 @@ const command = define({
   name: "e2sm",
   description: "Manage environment variables with AWS Secrets Manager",
   run: () => {
-    console.error("Error: Please specify a subcommand (set, get, pull, or delete)");
+    console.error("Error: Please specify a subcommand (init, set, get, pull, or delete)");
     console.error("");
     console.error("Usage:");
+    console.error("  e2sm init   - Initialize .e2smrc.json configuration file");
     console.error("  e2sm set    - Upload .env file to AWS Secrets Manager");
     console.error("  e2sm get    - Display secret from AWS Secrets Manager");
     console.error("  e2sm pull   - Pull secret and generate .env file");
@@ -26,6 +28,7 @@ await cli(process.argv.slice(2), command, {
   name: "e2sm",
   version: pkg.version,
   subCommands: {
+    init: initCommand,
     set: setCommand,
     get: getCommand,
     pull: pullCommand,

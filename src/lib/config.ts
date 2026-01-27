@@ -1,3 +1,5 @@
+import { type ParseError, parse, printParseErrorCode } from "jsonc-parser";
+
 export interface E2smConfig {
   template?: boolean;
   application?: string;
@@ -10,7 +12,8 @@ export interface E2smConfig {
 }
 
 /**
- * Loads config from .e2smrc.json (project or global).
+ * Loads config from .e2smrc.jsonc or .e2smrc.json (project or global).
+ * Searches in order: .jsonc (preferred) then .json (backward compatibility).
  * Returns empty object if no config found.
  */
 export async function loadConfig(): Promise<E2smConfig> {
@@ -18,15 +21,33 @@ export async function loadConfig(): Promise<E2smConfig> {
   const { join } = await import("node:path");
   const { readFile } = await import("node:fs/promises");
 
-  const candidates = [join(process.cwd(), ".e2smrc.json"), join(homedir(), ".e2smrc.json")];
+  const candidates = [
+    join(process.cwd(), ".e2smrc.jsonc"),
+    join(process.cwd(), ".e2smrc.json"),
+    join(homedir(), ".e2smrc.jsonc"),
+    join(homedir(), ".e2smrc.json"),
+  ];
 
   for (const filePath of candidates) {
+    let content: string;
     try {
-      const content = await readFile(filePath, "utf-8");
-      return JSON.parse(content);
+      content = await readFile(filePath, "utf-8");
     } catch {
-      // ignore errors (file not found, parse errors), continue to next
+      // File not found, try next candidate
+      continue;
     }
+
+    const errors: ParseError[] = [];
+    const config = parse(content, errors, { allowTrailingComma: true });
+
+    if (errors.length > 0) {
+      const errorMessages = errors.map((e) => printParseErrorCode(e.error)).join(", ");
+      console.warn(`Warning: Parse error in ${filePath}: ${errorMessages}`);
+      console.warn("Skipping this config file and trying next candidate...");
+      continue;
+    }
+
+    return config;
   }
 
   return {};

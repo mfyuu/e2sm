@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/e2sm/assets/schema.json",
+  // Secret name (cannot use with template mode)
+  // "name": "my-secret-name",
+  // Or use template mode: generate secret name as $application/$stage
+  // "template": true,
+  // "application": "my-app",
+  // "stage": "dev",
+  // AWS settings
+  // "profile": "my-profile",
+  // "region": "ap-northeast-1",
+  // File paths
+  // "input": ".env.local",
+  // "output": ".env"
+}

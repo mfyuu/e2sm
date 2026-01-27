@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { parse } from "jsonc-parser";
 import { unlink } from "node:fs/promises";
 import pkg from "../package.json";
 
@@ -27,6 +28,7 @@ describe("CLI", () => {
       expect(exitCode).toBe(0);
       expect(stdout).toContain("USAGE:");
       expect(stdout).toContain("e2sm");
+      expect(stdout).toContain("init");
       expect(stdout).toContain("get");
       expect(stdout).toContain("pull");
       expect(stdout).toContain("set");
@@ -49,6 +51,7 @@ describe("CLI", () => {
 
       expect(exitCode).toBe(1);
       expect(stderr).toContain("Please specify a subcommand");
+      expect(stderr).toContain("e2sm init");
       expect(stderr).toContain("e2sm set");
       expect(stderr).toContain("e2sm get");
       expect(stderr).toContain("e2sm pull");
@@ -454,9 +457,88 @@ describe("CLI", () => {
     });
   });
 
+  describe("init subcommand", () => {
+    const configPath = ".e2smrc.jsonc";
+    const projectRoot = import.meta.dir.replace("/src", "");
+
+    afterAll(async () => {
+      await unlink(`${projectRoot}/${configPath}`).catch(() => {});
+    });
+
+    describe("--help", () => {
+      test("shows help message", async () => {
+        const { stdout, exitCode } = await runCli(["init", "--help"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+        expect(stdout).toContain("--force");
+      });
+
+      test("shows help with -h flag", async () => {
+        const { stdout, exitCode } = await runCli(["init", "-h"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+      });
+    });
+
+    describe("unknown flags", () => {
+      test("exits with error for unknown flag", async () => {
+        const { stderr, exitCode } = await runCli(["init", "--unknown-flag"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --unknown-flag");
+      });
+
+      test("exits with error for unknown short flag", async () => {
+        const { stderr, exitCode } = await runCli(["init", "-x"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --x");
+      });
+    });
+
+    describe("create config file", () => {
+      beforeAll(async () => {
+        await unlink(`${projectRoot}/${configPath}`).catch(() => {});
+      });
+
+      test("creates config file with --force", async () => {
+        const { stdout, exitCode } = await runCli(["init", "--force"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("Created");
+        expect(stdout).toContain(configPath);
+
+        const content = await Bun.file(`${projectRoot}/${configPath}`).text();
+        const config = parse(content);
+        expect(config.$schema).toBe("https://unpkg.com/e2sm/assets/schema.json");
+      });
+
+      test("creates config file with -f flag", async () => {
+        await unlink(`${projectRoot}/${configPath}`).catch(() => {});
+        const { stdout, exitCode } = await runCli(["init", "-f"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("Created");
+      });
+
+      test("shows overwritten message when file exists", async () => {
+        // First create the file
+        await Bun.write(`${projectRoot}/${configPath}`, "{}");
+
+        const { stdout, exitCode } = await runCli(["init", "--force"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("Overwritten");
+        expect(stdout).toContain(configPath);
+      });
+    });
+  });
+
   describe("config file", () => {
     const testEnvPath = "test-fixtures/test.env";
-    const configPath = ".e2smrc.json";
+    const configPath = ".e2smrc.jsonc";
     const projectRoot = import.meta.dir.replace("/src", "");
 
     beforeAll(async () => {

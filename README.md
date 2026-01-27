@@ -5,6 +5,7 @@
 ## Usage
 
 ```bash
+npx e2sm init     # Create .e2smrc.jsonc config file
 npx e2sm set      # Upload .env to Secrets Manager
 npx e2sm get      # Display secret value
 npx e2sm pull     # Download secret to .env file
@@ -13,6 +14,19 @@ npx e2sm --help   # Show help
 ```
 
 ## Commands
+
+### init - Create configuration file
+
+Creates a `.e2smrc.jsonc` configuration file in the current directory with commented examples.
+
+```bash
+npx e2sm init
+npx e2sm init --force   # Overwrite existing file
+```
+
+| Flag      | Short | Description             |
+| --------- | ----- | ----------------------- |
+| `--force` | `-f`  | Overwrite existing file |
 
 ### set - Upload .env to Secrets Manager
 
@@ -84,25 +98,34 @@ npx e2sm delete -n my-app/prod -d 7 --force
 
 ## Configuration
 
-Create a `.e2smrc.json` file to set default options.
+Create a `.e2smrc.jsonc` file to set default options. JSONC format supports comments.
 
-```json
+```jsonc
 {
-  "$schema": "https://unpkg.com/e2sm/schema.json",
-  "template": true,
-  "application": "my-app",
-  "stage": "dev",
+  "$schema": "https://unpkg.com/e2sm/assets/schema.json",
+  // Secret name (cannot use with template mode)
+  "name": "my-secret-name",
+  // Or use template mode: generate secret name as $application/$stage
+  // "template": true,
+  // "application": "my-app",
+  // "stage": "dev",
+  // AWS settings
   "profile": "my-profile",
   "region": "ap-northeast-1",
+  // File paths
   "input": ".env.local",
-  "output": ".env"
+  "output": ".env",
 }
 ```
 
 ### Config file locations
 
-1. `./.e2smrc.json` (project) - takes precedence
-2. `~/.e2smrc.json` (global)
+Searched in order (first found is used):
+
+1. `./.e2smrc.jsonc` (project)
+2. `./.e2smrc.json` (project, backward compatibility)
+3. `~/.e2smrc.jsonc` (global)
+4. `~/.e2smrc.json` (global, backward compatibility)
 
 Only the first found config is used (no merging).
 
