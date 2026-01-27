@@ -117,6 +117,26 @@ describe("jsonToEnv", () => {
     const result = jsonToEnv({ FOO: "bar\nbaz" });
     expect(result).toBe('FOO="bar\nbaz"');
   });
+
+  test("converts number values to string", () => {
+    const result = jsonToEnv({ PORT: 3000, DEBUG: 1 });
+    expect(result).toBe('PORT="3000"\nDEBUG="1"');
+  });
+
+  test("converts boolean values to string", () => {
+    const result = jsonToEnv({ ENABLED: true, DISABLED: false });
+    expect(result).toBe('ENABLED="true"\nDISABLED="false"');
+  });
+
+  test("converts null and undefined to string", () => {
+    const result = jsonToEnv({ NULL_VAL: null, UNDEF_VAL: undefined });
+    expect(result).toBe('NULL_VAL="null"\nUNDEF_VAL="undefined"');
+  });
+
+  test("converts object values to string", () => {
+    const result = jsonToEnv({ OBJ: { nested: "value" } });
+    expect(result).toBe('OBJ="[object Object]"');
+  });
 });
 
 describe("generateEnvHeader", () => {

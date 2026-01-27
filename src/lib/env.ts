@@ -46,10 +46,11 @@ export function parseEnvContent(content: string): Record<string, string> {
 /**
  * Converts JSON object to .env format string.
  */
-export function jsonToEnv(data: Record<string, string>): string {
+export function jsonToEnv(data: Record<string, unknown>): string {
   return Object.entries(data)
     .map(([key, value]) => {
-      const escaped = value.replace(/"/g, '\\"');
+      const stringValue = typeof value === "string" ? value : String(value);
+      const escaped = stringValue.replace(/"/g, '\\"');
       return `${key}="${escaped}"`;
     })
     .join("\n");
