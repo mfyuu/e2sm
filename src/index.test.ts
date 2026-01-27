@@ -20,27 +20,15 @@ const runCli = async (args: string[]) => {
 };
 
 describe("CLI", () => {
-  describe("--help", () => {
-    test("shows help message", async () => {
-      const { stdout, exitCode } = await runCli(["--help"]);
+  describe("no subcommand", () => {
+    test("shows error message when no subcommand provided", async () => {
+      const { stderr, exitCode } = await runCli([]);
 
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("USAGE:");
-      expect(stdout).toContain("--dry-run");
-      expect(stdout).toContain("--profile");
-      expect(stdout).toContain("--input");
-      expect(stdout).toContain("--name");
-      expect(stdout).toContain("--region");
-      expect(stdout).toContain("--template");
-      expect(stdout).toContain("--application");
-      expect(stdout).toContain("--stage");
-    });
-
-    test("shows help with -h flag", async () => {
-      const { stdout, exitCode } = await runCli(["-h"]);
-
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("USAGE:");
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Please specify a subcommand");
+      expect(stderr).toContain("e2sm set");
+      expect(stderr).toContain("e2sm get");
+      expect(stderr).toContain("e2sm pull");
     });
   });
 
@@ -60,180 +48,222 @@ describe("CLI", () => {
     });
   });
 
-  describe("unknown flags", () => {
-    test("exits with error for unknown flag", async () => {
-      const { stderr, exitCode } = await runCli(["--unknown-flag"]);
+  describe("set subcommand", () => {
+    describe("--help", () => {
+      test("shows help message", async () => {
+        const { stdout, exitCode } = await runCli(["set", "--help"]);
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Unknown option: --unknown-flag");
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+        expect(stdout).toContain("--dry-run");
+        expect(stdout).toContain("--profile");
+        expect(stdout).toContain("--input");
+        expect(stdout).toContain("--name");
+        expect(stdout).toContain("--region");
+        expect(stdout).toContain("--template");
+        expect(stdout).toContain("--application");
+        expect(stdout).toContain("--stage");
+      });
+
+      test("shows help with -h flag", async () => {
+        const { stdout, exitCode } = await runCli(["set", "-h"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+      });
     });
 
-    test("exits with error for unknown short flag", async () => {
-      const { stderr, exitCode } = await runCli(["-x"]);
+    describe("unknown flags", () => {
+      test("exits with error for unknown flag", async () => {
+        const { stderr, exitCode } = await runCli(["set", "--unknown-flag"]);
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Unknown option: --x");
-    });
-  });
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --unknown-flag");
+      });
 
-  describe("--dry-run", () => {
-    const testEnvPath = "test-fixtures/test.env";
+      test("exits with error for unknown short flag", async () => {
+        const { stderr, exitCode } = await runCli(["set", "-x"]);
 
-    beforeAll(async () => {
-      await Bun.write(
-        `${import.meta.dir.replace("/src", "")}/${testEnvPath}`,
-        "FOO=bar\nBAZ=qux\n",
-      );
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --x");
+      });
     });
 
-    afterAll(async () => {
-      await unlink(`${import.meta.dir.replace("/src", "")}/${testEnvPath}`).catch(() => {});
-      await unlink(`${import.meta.dir.replace("/src", "")}/test-fixtures`).catch(() => {});
+    describe("--dry-run", () => {
+      const testEnvPath = "test-fixtures/test.env";
+
+      beforeAll(async () => {
+        await Bun.write(
+          `${import.meta.dir.replace("/src", "")}/${testEnvPath}`,
+          "FOO=bar\nBAZ=qux\n",
+        );
+      });
+
+      afterAll(async () => {
+        await unlink(`${import.meta.dir.replace("/src", "")}/${testEnvPath}`).catch(() => {});
+        await unlink(`${import.meta.dir.replace("/src", "")}/test-fixtures`).catch(() => {});
+      });
+
+      test("previews JSON output without uploading", async () => {
+        const { stdout, exitCode } = await runCli(["set", "--dry-run", "--input", testEnvPath]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("Dry-run mode");
+        expect(stdout).toContain("FOO");
+        expect(stdout).toContain("bar");
+        expect(stdout).toContain("BAZ");
+        expect(stdout).toContain("qux");
+      });
+
+      test("works with -d flag", async () => {
+        const { stdout, exitCode } = await runCli(["set", "-d", "-i", testEnvPath]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("Dry-run mode");
+      });
     });
 
-    test("previews JSON output without uploading", async () => {
-      const { stdout, exitCode } = await runCli(["--dry-run", "--input", testEnvPath]);
+    describe("file not found", () => {
+      test("exits with error when file does not exist", async () => {
+        const { stdout, exitCode } = await runCli([
+          "set",
+          "--dry-run",
+          "--input",
+          "nonexistent.env",
+        ]);
 
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("Dry-run mode");
-      expect(stdout).toContain("FOO");
-      expect(stdout).toContain("bar");
-      expect(stdout).toContain("BAZ");
-      expect(stdout).toContain("qux");
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain("File not found");
+      });
     });
 
-    test("works with -d flag", async () => {
-      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath]);
+    describe("empty env file", () => {
+      const emptyEnvPath = "test-fixtures/empty.env";
 
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("Dry-run mode");
-    });
-  });
+      beforeAll(async () => {
+        await Bun.write(
+          `${import.meta.dir.replace("/src", "")}/${emptyEnvPath}`,
+          "# only comments\n",
+        );
+      });
 
-  describe("file not found", () => {
-    test("exits with error when file does not exist", async () => {
-      const { stdout, exitCode } = await runCli(["--dry-run", "--input", "nonexistent.env"]);
+      afterAll(async () => {
+        await unlink(`${import.meta.dir.replace("/src", "")}/${emptyEnvPath}`).catch(() => {});
+      });
 
-      expect(exitCode).toBe(1);
-      expect(stdout).toContain("File not found");
-    });
-  });
+      test("exits with error when no valid variables found", async () => {
+        const { stdout, exitCode } = await runCli(["set", "--dry-run", "--input", emptyEnvPath]);
 
-  describe("empty env file", () => {
-    const emptyEnvPath = "test-fixtures/empty.env";
-
-    beforeAll(async () => {
-      await Bun.write(
-        `${import.meta.dir.replace("/src", "")}/${emptyEnvPath}`,
-        "# only comments\n",
-      );
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain("No valid environment variables found");
+      });
     });
 
-    afterAll(async () => {
-      await unlink(`${import.meta.dir.replace("/src", "")}/${emptyEnvPath}`).catch(() => {});
+    describe("flag conflicts", () => {
+      test("--name with --template exits with error", async () => {
+        const { stderr, exitCode } = await runCli(["set", "--name", "x", "--template"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Cannot use --name");
+        expect(stderr).toContain("--template");
+      });
+
+      test("--name with --application exits with error", async () => {
+        const { stderr, exitCode } = await runCli(["set", "--name", "x", "-a", "app"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Cannot use --name");
+        expect(stderr).toContain("--application");
+      });
+
+      test("--name with --stage exits with error", async () => {
+        const { stderr, exitCode } = await runCli(["set", "--name", "x", "-s", "prod"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Cannot use --name");
+        expect(stderr).toContain("--stage");
+      });
+
+      test("--name with multiple template flags exits with error", async () => {
+        const { stderr, exitCode } = await runCli([
+          "set",
+          "--name",
+          "x",
+          "-t",
+          "-a",
+          "app",
+          "-s",
+          "prod",
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Cannot use --name");
+        expect(stderr).toContain("--template");
+        expect(stderr).toContain("--application");
+        expect(stderr).toContain("--stage");
+      });
     });
 
-    test("exits with error when no valid variables found", async () => {
-      const { stdout, exitCode } = await runCli(["--dry-run", "--input", emptyEnvPath]);
+    describe("template mode", () => {
+      const testEnvPath = "test-fixtures/test.env";
 
-      expect(exitCode).toBe(1);
-      expect(stdout).toContain("No valid environment variables found");
-    });
-  });
+      beforeAll(async () => {
+        await Bun.write(
+          `${import.meta.dir.replace("/src", "")}/${testEnvPath}`,
+          "FOO=bar\nBAZ=qux\n",
+        );
+      });
 
-  describe("flag conflicts", () => {
-    test("--name with --template exits with error", async () => {
-      const { stderr, exitCode } = await runCli(["--name", "x", "--template"]);
+      afterAll(async () => {
+        await unlink(`${import.meta.dir.replace("/src", "")}/${testEnvPath}`).catch(() => {});
+      });
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Cannot use --name");
-      expect(stderr).toContain("--template");
-    });
+      test("-a and -s without -t works (implicit template mode)", async () => {
+        const { stdout, exitCode } = await runCli([
+          "set",
+          "-d",
+          "-i",
+          testEnvPath,
+          "-a",
+          "my-app",
+          "-s",
+          "prod",
+        ]);
 
-    test("--name with --application exits with error", async () => {
-      const { stderr, exitCode } = await runCli(["--name", "x", "-a", "app"]);
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("Dry-run mode");
+      });
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Cannot use --name");
-      expect(stderr).toContain("--application");
-    });
+      test("-t -a -s generates correct secret name", async () => {
+        const { stdout, exitCode } = await runCli([
+          "set",
+          "-d",
+          "-i",
+          testEnvPath,
+          "-t",
+          "-a",
+          "my-app",
+          "-s",
+          "prod",
+        ]);
 
-    test("--name with --stage exits with error", async () => {
-      const { stderr, exitCode } = await runCli(["--name", "x", "-s", "prod"]);
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("Dry-run mode");
+      });
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Cannot use --name");
-      expect(stderr).toContain("--stage");
-    });
+      test("-a only (implicit template mode)", async () => {
+        const { exitCode } = await runCli(["set", "-d", "-i", testEnvPath, "-a", "my-app"]);
 
-    test("--name with multiple template flags exits with error", async () => {
-      const { stderr, exitCode } = await runCli(["--name", "x", "-t", "-a", "app", "-s", "prod"]);
+        // Will wait for stage input interactively, but dry-run exits before secret name is needed
+        expect(exitCode).toBe(0);
+      });
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Cannot use --name");
-      expect(stderr).toContain("--template");
-      expect(stderr).toContain("--application");
-      expect(stderr).toContain("--stage");
-    });
-  });
+      test("-s only (implicit template mode)", async () => {
+        const { exitCode } = await runCli(["set", "-d", "-i", testEnvPath, "-s", "prod"]);
 
-  describe("template mode", () => {
-    const testEnvPath = "test-fixtures/test.env";
-
-    beforeAll(async () => {
-      await Bun.write(
-        `${import.meta.dir.replace("/src", "")}/${testEnvPath}`,
-        "FOO=bar\nBAZ=qux\n",
-      );
-    });
-
-    afterAll(async () => {
-      await unlink(`${import.meta.dir.replace("/src", "")}/${testEnvPath}`).catch(() => {});
-    });
-
-    test("-a and -s without -t works (implicit template mode)", async () => {
-      const { stdout, exitCode } = await runCli([
-        "-d",
-        "-i",
-        testEnvPath,
-        "-a",
-        "my-app",
-        "-s",
-        "prod",
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("Dry-run mode");
-    });
-
-    test("-t -a -s generates correct secret name", async () => {
-      const { stdout, exitCode } = await runCli([
-        "-d",
-        "-i",
-        testEnvPath,
-        "-t",
-        "-a",
-        "my-app",
-        "-s",
-        "prod",
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("Dry-run mode");
-    });
-
-    test("-a only (implicit template mode)", async () => {
-      const { exitCode } = await runCli(["-d", "-i", testEnvPath, "-a", "my-app"]);
-
-      // Will wait for stage input interactively, but dry-run exits before secret name is needed
-      expect(exitCode).toBe(0);
-    });
-
-    test("-s only (implicit template mode)", async () => {
-      const { exitCode } = await runCli(["-d", "-i", testEnvPath, "-s", "prod"]);
-
-      // Will wait for application input interactively, but dry-run exits before secret name is needed
-      expect(exitCode).toBe(0);
+        // Will wait for application input interactively, but dry-run exits before secret name is needed
+        expect(exitCode).toBe(0);
+      });
     });
   });
 
@@ -274,6 +304,45 @@ describe("CLI", () => {
     });
   });
 
+  describe("pull subcommand", () => {
+    describe("--help", () => {
+      test("shows help message", async () => {
+        const { stdout, exitCode } = await runCli(["pull", "--help"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+        expect(stdout).toContain("--profile");
+        expect(stdout).toContain("--region");
+        expect(stdout).toContain("--name");
+        expect(stdout).toContain("--output");
+        expect(stdout).toContain("--force");
+      });
+
+      test("shows help with -h flag", async () => {
+        const { stdout, exitCode } = await runCli(["pull", "-h"]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain("USAGE:");
+      });
+    });
+
+    describe("unknown flags", () => {
+      test("exits with error for unknown flag", async () => {
+        const { stderr, exitCode } = await runCli(["pull", "--unknown-flag"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --unknown-flag");
+      });
+
+      test("exits with error for unknown short flag", async () => {
+        const { stderr, exitCode } = await runCli(["pull", "-x"]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain("Unknown option: --x");
+      });
+    });
+  });
+
   describe("config file", () => {
     const testEnvPath = "test-fixtures/test.env";
     const configPath = ".e2smrc.json";
@@ -290,7 +359,7 @@ describe("CLI", () => {
 
     test("loads input flag from config", async () => {
       await Bun.write(`${projectRoot}/${configPath}`, JSON.stringify({ input: testEnvPath }));
-      const { stdout, exitCode } = await runCli(["-d"]);
+      const { stdout, exitCode } = await runCli(["set", "-d"]);
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain("Dry-run mode");
@@ -299,7 +368,7 @@ describe("CLI", () => {
 
     test("CLI flag overrides config", async () => {
       await Bun.write(`${projectRoot}/${configPath}`, JSON.stringify({ input: "nonexistent.env" }));
-      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath]);
+      const { stdout, exitCode } = await runCli(["set", "-d", "-i", testEnvPath]);
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain("Dry-run mode");
@@ -315,7 +384,7 @@ describe("CLI", () => {
           input: testEnvPath,
         }),
       );
-      const { stdout, exitCode } = await runCli(["-d"]);
+      const { stdout, exitCode } = await runCli(["set", "-d"]);
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain("Dry-run mode");
@@ -323,7 +392,7 @@ describe("CLI", () => {
 
     test("ignores invalid config file", async () => {
       await Bun.write(`${projectRoot}/${configPath}`, "invalid json");
-      const { stdout, exitCode } = await runCli(["-d", "-i", testEnvPath]);
+      const { stdout, exitCode } = await runCli(["set", "-d", "-i", testEnvPath]);
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain("Dry-run mode");

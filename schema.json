@@ -29,6 +29,14 @@
     "input": {
       "type": "string",
       "description": "Path to the .env file"
+    },
+    "output": {
+      "type": "string",
+      "description": "Path to the output .env file for pull command"
+    },
+    "name": {
+      "type": "string",
+      "description": "Secret name for AWS Secrets Manager"
     }
   },
   "additionalProperties": false

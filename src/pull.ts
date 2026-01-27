@@ -1,10 +1,12 @@
 import * as p from "@clack/prompts";
 import { define } from "gunshi";
+import { access, writeFile } from "node:fs/promises";
 import pkg from "../package.json";
 import {
   exec,
   fetchSecretList,
-  formatJson,
+  generateEnvHeader,
+  jsonToEnv,
   loadConfig,
   mergeWithConfig,
   validateUnknownFlags,
@@ -14,9 +16,9 @@ function isCancel(value: unknown): value is symbol {
   return p.isCancel(value);
 }
 
-export const getCommand = define({
-  name: "get",
-  description: "Get secret value from AWS Secrets Manager",
+export const pullCommand = define({
+  name: "pull",
+  description: "Pull secret from AWS Secrets Manager and generate .env file",
   args: {
     profile: {
       type: "string",
@@ -33,6 +35,16 @@ export const getCommand = define({
       short: "n",
       description: "Secret name to retrieve (skip interactive selection)",
     },
+    output: {
+      type: "string",
+      short: "o",
+      description: "Output .env file path (skip interactive prompt)",
+    },
+    force: {
+      type: "boolean",
+      short: "f",
+      description: "Overwrite existing file without confirmation",
+    },
   },
   run: async (ctx) => {
     const config = await loadConfig();
@@ -47,12 +59,15 @@ export const getCommand = define({
     const profile = merged.profile;
     const region = merged.region;
     const nameFlag = ctx.values.name ?? config.name;
+    const outputFlag = ctx.values.output ?? config.output;
+    const forceFlag = ctx.values.force;
 
-    p.intro(`e2sm get v${pkg.version} - Get secret from AWS Secrets Manager`);
+    p.intro(`e2sm pull v${pkg.version} - Pull secret to .env file`);
 
     const profileArgs = profile ? ["--profile", profile] : [];
     const regionArgs = region ? ["--region", region] : [];
 
+    // 1. Get secret name
     let secretName: string;
 
     if (nameFlag) {
@@ -94,6 +109,69 @@ export const getCommand = define({
       secretName = selected;
     }
 
+    // 2. Get output file path
+    let outputPath: string;
+
+    if (outputFlag) {
+      outputPath = outputFlag;
+    } else {
+      const result = await p.select({
+        message: "Select output file:",
+        options: [
+          { value: ".env", label: ".env" },
+          { value: ".env.local", label: ".env.local" },
+          { value: ".env.development", label: ".env.development" },
+          { value: ".env.production", label: ".env.production" },
+          { value: "__other__", label: "Other (enter custom path)" },
+        ],
+      });
+
+      if (isCancel(result)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+
+      if (result === "__other__") {
+        const customPath = await p.text({
+          message: "Enter the output file path:",
+          placeholder: ".env",
+          defaultValue: ".env",
+        });
+
+        if (isCancel(customPath)) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+
+        outputPath = customPath;
+      } else {
+        outputPath = result;
+      }
+    }
+
+    // 3. Check if file exists and confirm overwrite
+    const fileExists = await access(outputPath)
+      .then(() => true)
+      .catch(() => false);
+
+    if (fileExists && !forceFlag) {
+      const confirmed = await p.confirm({
+        message: `File '${outputPath}' already exists. Overwrite?`,
+        initialValue: false,
+      });
+
+      if (isCancel(confirmed)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+
+      if (!confirmed) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+    }
+
+    // 4. Fetch secret value
     const spinner = p.spinner();
     spinner.start(`Fetching secret value for '${secretName}'...`);
 
@@ -114,19 +192,23 @@ export const getCommand = define({
 
     spinner.stop("Secret value fetched");
 
+    // 5. Parse and convert to .env format
     const secretData = JSON.parse(getResult.stdout);
     const secretString = secretData.SecretString;
 
-    p.log.info(`Secret: ${secretName}`);
-    console.log();
-
+    let envContent: string;
     try {
       const parsed = JSON.parse(secretString);
-      console.log(formatJson(parsed));
+      envContent = jsonToEnv(parsed);
     } catch {
-      console.log(secretString);
+      // If not JSON, write as-is
+      envContent = secretString;
     }
 
-    p.outro("Done");
+    // 6. Write to file with header comment
+    const header = generateEnvHeader(secretName);
+    await writeFile(outputPath, header + "\n" + envContent + "\n", "utf-8");
+
+    p.outro(`Secret '${secretName}' has been written to '${outputPath}'`);
   },
 });
