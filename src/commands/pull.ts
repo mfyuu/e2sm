@@ -1,7 +1,7 @@
 import * as p from "@clack/prompts";
 import { define } from "gunshi";
 import { access, writeFile } from "node:fs/promises";
-import pkg from "../package.json";
+import pkg from "../../package.json";
 import {
   exec,
   fetchSecretList,
@@ -10,7 +10,7 @@ import {
   loadConfig,
   mergeWithConfig,
   validateUnknownFlags,
-} from "./lib";
+} from "../lib";
 
 function isCancel(value: unknown): value is symbol {
   return p.isCancel(value);

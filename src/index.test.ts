@@ -20,6 +20,28 @@ const runCli = async (args: string[]) => {
 };
 
 describe("CLI", () => {
+  describe("--help", () => {
+    test("shows help message", async () => {
+      const { stdout, exitCode } = await runCli(["--help"]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("USAGE:");
+      expect(stdout).toContain("e2sm");
+      expect(stdout).toContain("get");
+      expect(stdout).toContain("pull");
+      expect(stdout).toContain("set");
+      expect(stdout).not.toContain("undefined");
+    });
+
+    test("shows help with -h flag", async () => {
+      const { stdout, exitCode } = await runCli(["-h"]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("USAGE:");
+      expect(stdout).not.toContain("undefined");
+    });
+  });
+
   describe("no subcommand", () => {
     test("shows error message when no subcommand provided", async () => {
       const { stderr, exitCode } = await runCli([]);
@@ -109,6 +131,7 @@ describe("CLI", () => {
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain("Dry-run mode");
+        expect(stdout).toContain(testEnvPath);
         expect(stdout).toContain("FOO");
         expect(stdout).toContain("bar");
         expect(stdout).toContain("BAZ");

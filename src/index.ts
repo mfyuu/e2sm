@@ -1,8 +1,8 @@
 import { cli, define } from "gunshi";
 import pkg from "../package.json";
-import { getCommand } from "./get";
-import { pullCommand } from "./pull";
-import { setCommand } from "./set";
+import { getCommand } from "./commands/get";
+import { pullCommand } from "./commands/pull";
+import { setCommand } from "./commands/set";
 
 const command = define({
   name: "e2sm",
@@ -21,6 +21,7 @@ const command = define({
 });
 
 await cli(process.argv.slice(2), command, {
+  name: "e2sm",
   version: pkg.version,
   subCommands: {
     set: setCommand,

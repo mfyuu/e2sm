@@ -1,0 +1,171 @@
+import type { ArgSchema, ArgToken } from "gunshi";
+import { describe, expect, test } from "bun:test";
+import {
+  isTemplateMode,
+  toKebabCase,
+  validateNameTemplateConflict,
+  validateUnknownFlags,
+} from "./validation";
+
+describe("toKebabCase", () => {
+  test("converts camelCase to kebab-case", () => {
+    expect(toKebabCase("dryRun")).toBe("dry-run");
+  });
+
+  test("converts multiple uppercase letters", () => {
+    expect(toKebabCase("thisIsATest")).toBe("this-is-atest");
+  });
+
+  test("leaves already lowercase string unchanged", () => {
+    expect(toKebabCase("lowercase")).toBe("lowercase");
+  });
+
+  test("leaves already kebab-case string unchanged", () => {
+    expect(toKebabCase("already-kebab")).toBe("already-kebab");
+  });
+
+  test("handles single word", () => {
+    expect(toKebabCase("word")).toBe("word");
+  });
+
+  test("handles empty string", () => {
+    expect(toKebabCase("")).toBe("");
+  });
+});
+
+describe("validateUnknownFlags", () => {
+  const createToken = (name: string): ArgToken => ({
+    kind: "option",
+    name,
+    rawName: `--${name}`,
+    value: undefined,
+    index: 0,
+  });
+
+  const baseArgs: Record<string, ArgSchema> = {
+    dryRun: {
+      type: "boolean",
+      short: "d",
+    },
+    profile: {
+      type: "string",
+      short: "p",
+    },
+  };
+
+  test("returns null for known options", () => {
+    const tokens = [createToken("dry-run")];
+    expect(validateUnknownFlags(tokens, baseArgs)).toBeNull();
+  });
+
+  test("returns null for known short options converted to long", () => {
+    const tokens = [createToken("profile")];
+    expect(validateUnknownFlags(tokens, baseArgs)).toBeNull();
+  });
+
+  test("returns null for built-in help option", () => {
+    const tokens = [createToken("help")];
+    expect(validateUnknownFlags(tokens, {})).toBeNull();
+  });
+
+  test("returns null for built-in version option", () => {
+    const tokens = [createToken("version")];
+    expect(validateUnknownFlags(tokens, {})).toBeNull();
+  });
+
+  test("returns error for unknown option", () => {
+    const tokens = [createToken("unknown")];
+    expect(validateUnknownFlags(tokens, baseArgs)).toBe("Unknown option: --unknown");
+  });
+
+  test("returns null for --no- prefixed negatable options", () => {
+    const tokens = [createToken("no-dry-run")];
+    expect(validateUnknownFlags(tokens, baseArgs)).toBeNull();
+  });
+
+  test("returns error for --no- prefixed unknown options", () => {
+    const tokens = [createToken("no-unknown")];
+    expect(validateUnknownFlags(tokens, baseArgs)).toBe("Unknown option: --no-unknown");
+  });
+
+  test("returns null for empty tokens", () => {
+    expect(validateUnknownFlags([], baseArgs)).toBeNull();
+  });
+
+  test("ignores non-option tokens", () => {
+    const tokens: ArgToken[] = [{ kind: "positional", value: "some-value", index: 0 }];
+    expect(validateUnknownFlags(tokens, baseArgs)).toBeNull();
+  });
+
+  test("returns first unknown option when multiple unknown options exist", () => {
+    const tokens = [createToken("unknown1"), createToken("unknown2")];
+    expect(validateUnknownFlags(tokens, baseArgs)).toBe("Unknown option: --unknown1");
+  });
+});
+
+describe("isTemplateMode", () => {
+  test("returns false when no template flags", () => {
+    expect(isTemplateMode({})).toBe(false);
+  });
+
+  test("returns true when --template", () => {
+    expect(isTemplateMode({ template: true })).toBe(true);
+  });
+
+  test("returns false when --template is false", () => {
+    expect(isTemplateMode({ template: false })).toBe(false);
+  });
+
+  test("returns true when --application", () => {
+    expect(isTemplateMode({ application: "app" })).toBe(true);
+  });
+
+  test("returns true when --stage", () => {
+    expect(isTemplateMode({ stage: "prod" })).toBe(true);
+  });
+
+  test("returns true when all flags are set", () => {
+    expect(isTemplateMode({ template: true, application: "app", stage: "prod" })).toBe(true);
+  });
+});
+
+describe("validateNameTemplateConflict", () => {
+  test("returns null when no conflict", () => {
+    expect(validateNameTemplateConflict({ name: "secret" })).toBeNull();
+    expect(validateNameTemplateConflict({ template: true })).toBeNull();
+  });
+
+  test("returns null when only template mode flags", () => {
+    expect(validateNameTemplateConflict({ application: "app", stage: "prod" })).toBeNull();
+  });
+
+  test("returns error when --name with --template", () => {
+    const result = validateNameTemplateConflict({ name: "s", template: true });
+    expect(result).toContain("--template");
+    expect(result).toContain("Cannot use --name");
+  });
+
+  test("returns error when --name with --application", () => {
+    const result = validateNameTemplateConflict({ name: "s", application: "a" });
+    expect(result).toContain("--application");
+    expect(result).toContain("Cannot use --name");
+  });
+
+  test("returns error when --name with --stage", () => {
+    const result = validateNameTemplateConflict({ name: "s", stage: "p" });
+    expect(result).toContain("--stage");
+    expect(result).toContain("Cannot use --name");
+  });
+
+  test("returns error with all conflicting flags listed", () => {
+    const result = validateNameTemplateConflict({
+      name: "s",
+      template: true,
+      application: "a",
+      stage: "p",
+    });
+    expect(result).toContain("--template");
+    expect(result).toContain("--application");
+    expect(result).toContain("--stage");
+  });
+});

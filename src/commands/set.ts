@@ -1,7 +1,7 @@
 import * as p from "@clack/prompts";
 import { define } from "gunshi";
 import { access, readFile } from "node:fs/promises";
-import pkg from "../package.json";
+import pkg from "../../package.json";
 import {
   exec,
   formatJson,
@@ -11,7 +11,7 @@ import {
   parseEnvContent,
   validateNameTemplateConflict,
   validateUnknownFlags,
-} from "./lib";
+} from "../lib";
 
 function isCancel(value: unknown): value is symbol {
   return p.isCancel(value);
@@ -134,7 +134,7 @@ export const setCommand = define({
 
     // 3. Dry-run mode: preview JSON
     if (isDryRun) {
-      p.log.info("Dry-run mode: Previewing JSON output");
+      p.log.info(`Dry-run mode: Previewing '${envFilePath}'`);
       console.log(formatJson(envData));
       p.outro("Dry-run complete");
       return;
@@ -208,7 +208,7 @@ export const setCommand = define({
 
     // 5. Upload to AWS Secrets Manager
     const spinner = p.spinner();
-    spinner.start("Uploading to AWS Secrets Manager...");
+    spinner.start(`Uploading '${envFilePath}' to '${secretName}' in AWS Secrets Manager...`);
 
     const profileArgs = profile ? ["--profile", profile] : [];
     const regionArgs = region ? ["--region", region] : [];
