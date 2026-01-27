@@ -133,9 +133,14 @@ describe("jsonToEnv", () => {
     expect(result).toBe('NULL_VAL="null"\nUNDEF_VAL="undefined"');
   });
 
-  test("converts object values to string", () => {
+  test("converts object values to JSON string", () => {
     const result = jsonToEnv({ OBJ: { nested: "value" } });
-    expect(result).toBe('OBJ="[object Object]"');
+    expect(result).toBe('OBJ="{\\"nested\\":\\"value\\"}"');
+  });
+
+  test("converts array values to JSON string", () => {
+    const result = jsonToEnv({ ITEMS: [1, 2, 3] });
+    expect(result).toBe('ITEMS="[1,2,3]"');
   });
 });
 

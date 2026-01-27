@@ -49,7 +49,14 @@ export function parseEnvContent(content: string): Record<string, string> {
 export function jsonToEnv(data: Record<string, unknown>): string {
   return Object.entries(data)
     .map(([key, value]) => {
-      const stringValue = typeof value === "string" ? value : String(value);
+      let stringValue: string;
+      if (typeof value === "string") {
+        stringValue = value;
+      } else if (value !== null && typeof value === "object") {
+        stringValue = JSON.stringify(value);
+      } else {
+        stringValue = String(value);
+      }
       const escaped = stringValue.replace(/"/g, '\\"');
       return `${key}="${escaped}"`;
     })
