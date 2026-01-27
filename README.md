@@ -5,41 +5,127 @@
 ## Usage
 
 ```bash
-npx e2sm
-npx e2sm --dry-run
-npx e2sm --help
+npx e2sm init     # Create .e2smrc.jsonc config file
+npx e2sm set      # Upload .env to Secrets Manager
+npx e2sm get      # Display secret value
+npx e2sm pull     # Download secret to .env file
+npx e2sm delete   # Delete secret from Secrets Manager
+npx e2sm --help   # Show help
 ```
 
-### Get Secrets
+## Commands
 
-Retrieve secrets from AWS Secrets Manager.
+### init - Create configuration file
+
+Creates a `.e2smrc.jsonc` configuration file in the current directory with commented examples.
+
+```bash
+npx e2sm init
+npx e2sm init --force   # Overwrite existing file
+```
+
+| Flag      | Short | Description             |
+| --------- | ----- | ----------------------- |
+| `--force` | `-f`  | Overwrite existing file |
+
+### set - Upload .env to Secrets Manager
+
+```bash
+npx e2sm set
+npx e2sm set -i .env.local -n my-app/prod
+npx e2sm set --dry-run                    # Preview JSON without uploading
+npx e2sm set --force                      # Skip overwrite confirmation
+npx e2sm set -t -a my-app -s prod         # Template mode: creates "my-app/prod"
+```
+
+| Flag            | Short | Description                             |
+| --------------- | ----- | --------------------------------------- |
+| `--input`       | `-i`  | Path to .env file                       |
+| `--name`        | `-n`  | Secret name                             |
+| `--dry-run`     | `-d`  | Preview JSON output                     |
+| `--force`       | `-f`  | Skip overwrite confirmation             |
+| `--template`    | `-t`  | Use template mode ($application/$stage) |
+| `--application` | `-a`  | Application name (implies --template)   |
+| `--stage`       | `-s`  | Stage name (implies --template)         |
+| `--profile`     | `-p`  | AWS profile                             |
+| `--region`      | `-r`  | AWS region                              |
+
+### get - Display secret value
 
 ```bash
 npx e2sm get
-npx e2sm get -n my-secret-name
+npx e2sm get -n my-app/prod
 npx e2sm get -p my-profile -r ap-northeast-1
 ```
 
+| Flag        | Short | Description                              |
+| ----------- | ----- | ---------------------------------------- |
+| `--name`    | `-n`  | Secret name (skip interactive selection) |
+| `--profile` | `-p`  | AWS profile                              |
+| `--region`  | `-r`  | AWS region                               |
+
+### pull - Download secret to .env file
+
+```bash
+npx e2sm pull
+npx e2sm pull -n my-app/prod -o .env.local
+npx e2sm pull --force                     # Overwrite existing file
+```
+
+| Flag        | Short | Description                                  |
+| ----------- | ----- | -------------------------------------------- |
+| `--name`    | `-n`  | Secret name (skip interactive selection)     |
+| `--output`  | `-o`  | Output file path (default: .env)             |
+| `--force`   | `-f`  | Overwrite existing file without confirmation |
+| `--profile` | `-p`  | AWS profile                                  |
+| `--region`  | `-r`  | AWS region                                   |
+
+### delete - Delete secret from Secrets Manager
+
+```bash
+npx e2sm delete
+npx e2sm delete -n my-app/prod -d 7
+npx e2sm delete -n my-app/prod -d 7 --force
+```
+
+| Flag              | Short | Description                              |
+| ----------------- | ----- | ---------------------------------------- |
+| `--name`          | `-n`  | Secret name (skip interactive selection) |
+| `--recovery-days` | `-d`  | Recovery window in days (7-30)           |
+| `--force`         | `-f`  | Skip confirmation prompt                 |
+| `--profile`       | `-p`  | AWS profile                              |
+| `--region`        | `-r`  | AWS region                               |
+
 ## Configuration
 
-You can create a `.e2smrc.json` file to set default options.
+Create a `.e2smrc.jsonc` file to set default options. JSONC format supports comments.
 
-```json
+```jsonc
 {
-  "$schema": "https://unpkg.com/e2sm/schema.json",
-  "template": true,
-  "application": "my-app",
-  "stage": "dev",
+  "$schema": "https://unpkg.com/e2sm/assets/schema.json",
+  // Secret name (cannot use with template mode)
+  "name": "my-secret-name",
+  // Or use template mode: generate secret name as $application/$stage
+  // "template": true,
+  // "application": "my-app",
+  // "stage": "dev",
+  // AWS settings
   "profile": "my-profile",
   "region": "ap-northeast-1",
-  "input": ".env.local"
+  // File paths
+  "input": ".env.local",
+  "output": ".env",
 }
 ```
 
 ### Config file locations
 
-1. `./.e2smrc.json` (project) - takes precedence
-2. `~/.e2smrc.json` (global)
+Searched in order (first found is used):
+
+1. `./.e2smrc.jsonc` (project)
+2. `./.e2smrc.json` (project, backward compatibility)
+3. `~/.e2smrc.jsonc` (global)
+4. `~/.e2smrc.json` (global, backward compatibility)
 
 Only the first found config is used (no merging).
 
@@ -49,8 +135,8 @@ CLI flags always take precedence over config file values.
 
 ```bash
 # Uses profile from config
-npx e2sm
+npx e2sm set
 
 # Overrides config with "prod-profile"
-npx e2sm -p prod-profile
+npx e2sm set -p prod-profile
 ```

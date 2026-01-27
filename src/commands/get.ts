@@ -1,19 +1,17 @@
 import * as p from "@clack/prompts";
 import { define } from "gunshi";
-import pkg from "../package.json";
-import { exec, formatJson, loadConfig, mergeWithConfig, validateUnknownFlags } from "./lib";
+import pkg from "../../package.json";
+import {
+  exec,
+  fetchSecretList,
+  formatJson,
+  loadConfig,
+  mergeWithConfig,
+  validateUnknownFlags,
+} from "../lib";
 
 function isCancel(value: unknown): value is symbol {
   return p.isCancel(value);
-}
-
-interface SecretListEntry {
-  Name: string;
-  ARN: string;
-}
-
-interface SecretListResponse {
-  SecretList: SecretListEntry[];
 }
 
 export const getCommand = define({
@@ -48,7 +46,7 @@ export const getCommand = define({
     const merged = mergeWithConfig(ctx.values, config);
     const profile = merged.profile;
     const region = merged.region;
-    const nameFlag = ctx.values.name;
+    const nameFlag = ctx.values.name ?? config.name;
 
     p.intro(`e2sm get v${pkg.version} - Get secret from AWS Secrets Manager`);
 
@@ -63,23 +61,17 @@ export const getCommand = define({
       const spinner = p.spinner();
       spinner.start("Fetching secret list...");
 
-      const listResult = await exec("aws", [
-        "secretsmanager",
-        "list-secrets",
-        ...profileArgs,
-        ...regionArgs,
-      ]);
+      const result = await fetchSecretList({ profile, region });
 
-      if (listResult.exitCode !== 0) {
+      if ("error" in result) {
         spinner.stop("Failed to fetch secret list");
-        p.cancel(`Error: ${listResult.stderr}`);
+        p.cancel(`Error: ${result.error}`);
         process.exit(1);
       }
 
       spinner.stop("Secret list fetched");
 
-      const response: SecretListResponse = JSON.parse(listResult.stdout);
-      const secrets = response.SecretList;
+      const { secrets } = result;
 
       if (secrets.length === 0) {
         p.cancel("No secrets found");

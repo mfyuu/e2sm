@@ -1,14 +1,11 @@
 import type { ArgSchema, ArgToken } from "gunshi";
 import { describe, expect, test } from "bun:test";
 import {
-  exec,
   isTemplateMode,
-  mergeWithConfig,
-  parseEnvContent,
   toKebabCase,
   validateNameTemplateConflict,
   validateUnknownFlags,
-} from "./lib";
+} from "./validation";
 
 describe("toKebabCase", () => {
   test("converts camelCase to kebab-case", () => {
@@ -33,82 +30,6 @@ describe("toKebabCase", () => {
 
   test("handles empty string", () => {
     expect(toKebabCase("")).toBe("");
-  });
-});
-
-describe("parseEnvContent", () => {
-  test("parses basic KEY=value", () => {
-    expect(parseEnvContent("FOO=bar")).toEqual({ FOO: "bar" });
-  });
-
-  test("parses multiple KEY=value pairs", () => {
-    const content = `FOO=bar
-BAZ=qux`;
-    expect(parseEnvContent(content)).toEqual({ FOO: "bar", BAZ: "qux" });
-  });
-
-  test("parses double-quoted values", () => {
-    expect(parseEnvContent('FOO="bar baz"')).toEqual({ FOO: "bar baz" });
-  });
-
-  test("parses single-quoted values", () => {
-    expect(parseEnvContent("FOO='bar baz'")).toEqual({ FOO: "bar baz" });
-  });
-
-  test("preserves hash in double-quoted values", () => {
-    expect(parseEnvContent('FOO="bar#baz"')).toEqual({ FOO: "bar#baz" });
-  });
-
-  test("preserves hash in single-quoted values", () => {
-    expect(parseEnvContent("FOO='bar#baz'")).toEqual({ FOO: "bar#baz" });
-  });
-
-  test("removes inline comment from unquoted values", () => {
-    expect(parseEnvContent("FOO=bar # this is a comment")).toEqual({ FOO: "bar" });
-  });
-
-  test("skips empty lines", () => {
-    const content = `FOO=bar
-
-BAZ=qux`;
-    expect(parseEnvContent(content)).toEqual({ FOO: "bar", BAZ: "qux" });
-  });
-
-  test("skips comment lines", () => {
-    const content = `# This is a comment
-FOO=bar
-# Another comment
-BAZ=qux`;
-    expect(parseEnvContent(content)).toEqual({ FOO: "bar", BAZ: "qux" });
-  });
-
-  test("skips lines without equal sign", () => {
-    const content = `FOO=bar
-invalid line
-BAZ=qux`;
-    expect(parseEnvContent(content)).toEqual({ FOO: "bar", BAZ: "qux" });
-  });
-
-  test("handles value with equal sign", () => {
-    expect(parseEnvContent("FOO=bar=baz")).toEqual({ FOO: "bar=baz" });
-  });
-
-  test("trims whitespace around key and value", () => {
-    expect(parseEnvContent("  FOO  =  bar  ")).toEqual({ FOO: "bar" });
-  });
-
-  test("handles empty value", () => {
-    expect(parseEnvContent("FOO=")).toEqual({ FOO: "" });
-  });
-
-  test("returns empty object for empty content", () => {
-    expect(parseEnvContent("")).toEqual({});
-  });
-
-  test("returns empty object for only comments", () => {
-    const content = `# comment 1
-# comment 2`;
-    expect(parseEnvContent(content)).toEqual({});
   });
 });
 
@@ -246,60 +167,5 @@ describe("validateNameTemplateConflict", () => {
     expect(result).toContain("--template");
     expect(result).toContain("--application");
     expect(result).toContain("--stage");
-  });
-});
-
-describe("mergeWithConfig", () => {
-  test("CLI values take precedence over config", () => {
-    const cli = { application: "cli-app" };
-    const config = { application: "config-app", stage: "prod" };
-    const result = mergeWithConfig(cli, config);
-    expect(result.application).toBe("cli-app");
-    expect(result.stage).toBe("prod");
-  });
-
-  test("undefined CLI values do not override config", () => {
-    const cli = { application: undefined };
-    const config = { application: "config-app" };
-    const result = mergeWithConfig(cli, config);
-    expect(result.application).toBe("config-app");
-  });
-
-  test("returns config values when CLI has no values", () => {
-    const cli = {};
-    const config = { profile: "my-profile", region: "ap-northeast-1" };
-    const result = mergeWithConfig(cli, config);
-    expect(result.profile).toBe("my-profile");
-    expect(result.region).toBe("ap-northeast-1");
-  });
-
-  test("returns CLI values when config is empty", () => {
-    const cli = { template: true, input: ".env.local" };
-    const config = {};
-    const result = mergeWithConfig(cli, config);
-    expect(result.template).toBe(true);
-    expect(result.input).toBe(".env.local");
-  });
-
-  test("handles boolean false values from CLI", () => {
-    const cli = { template: false };
-    const config = { template: true };
-    const result = mergeWithConfig(cli, config);
-    expect(result.template).toBe(false);
-  });
-});
-
-describe("exec", () => {
-  test("executes command and returns stdout", async () => {
-    const result = await exec("echo", ["hello"]);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe("hello");
-    expect(result.stderr).toBe("");
-  });
-
-  test("returns stderr on error", async () => {
-    const result = await exec("ls", ["nonexistent-dir-12345"]);
-    expect(result.exitCode).not.toBe(0);
-    expect(result.stderr).toContain("No such file");
   });
 });
