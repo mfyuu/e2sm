@@ -1,5 +1,11 @@
 # e2sm
 
+## 0.6.1
+
+### Patch Changes
+
+- [`c561328`](https://github.com/mfyuu/e2sm/commit/c561328e261298b2606fbc9c5ce3ec33f20bc4fe) Thanks [@mfyuu](https://github.com/mfyuu)! - fix tsdown build error by adding loader option for .jsonc files
+
 ## 0.6.0
 
 ### Minor Changes
