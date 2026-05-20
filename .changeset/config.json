@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.1.2/schema.json",
-  "changelog": ["@changesets/changelog-github", { "repo": "mfyuu/e2sm" }],
+  "changelog": ["@changesets/changelog-github", { "repo": "lemtoc/e2sm" }],
   "commit": false,
   "fixed": [],
   "linked": [],

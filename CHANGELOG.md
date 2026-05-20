@@ -1,5 +1,11 @@
 # e2sm
 
+## 0.6.3
+
+### Patch Changes
+
+- Update package metadata for the GitHub username change from `mfyuu` to `lemtoc` (author, repository URL, LICENSE). Pin `publishConfig.registry` to `https://registry.npmjs.org` so `npm publish` does not pick up the local proxy default.
+
 ## 0.6.2
 
 ### Patch Changes
